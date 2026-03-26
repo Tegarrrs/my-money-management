@@ -1,115 +1,91 @@
-# 💰 Money Management App
+# Money Management App
 
-Aplikasi manajemen keuangan pribadi berbasis Laravel yang dirancang dengan pendekatan **clean architecture** dan **separation of concerns** yang jelas.
-Project ini tidak hanya berfokus pada fitur, tetapi juga pada **desain sistem yang scalable dan maintainable**.
+Aplikasi sederhana untuk mencatat pemasukan dan pengeluaran, tapi dibangun dengan pendekatan yang serius di sisi arsitektur.
 
----
-
-## 🚀 Goals
-
-* Membantu pengguna mencatat pemasukan & pengeluaran
-* Memberikan insight finansial melalui laporan
-* Menjadi portfolio yang menunjukkan:
-
-  * Clean Architecture di Laravel
-  * Best practice separation of concerns
-  * Extensible system (OCR, automation, dll)
+Project ini saya gunakan sebagai eksplorasi bagaimana menerapkan clean architecture di Laravel tanpa mengorbankan pragmatisme.
 
 ---
 
-## 🧱 Tech Stack
+## Kenapa project ini dibuat
 
-* **Backend**: Laravel 13
-* **Database**: MySQL / PostgreSQL
-* **Architecture Style**: Clean Architecture (Controller → Use Case / Service → Domain)
-* **Authentication**: Laravel Sanctum (planned)
-* **Queue (planned)**: Redis
-* **OCR (planned)**: Tesseract / API-based OCR
+Kebanyakan aplikasi finance pribadi itu berhenti di level “bisa dipakai”.
+Masalahnya, begitu fitur mulai nambah (import data, parsing struk, analytics), struktur kodenya langsung berantakan.
 
----
+Di project ini saya mencoba dari awal:
 
-## 📂 Project Structure
+* memisahkan business logic dengan jelas
+* menjaga controller tetap tipis
+* menghindari logic penting tersembunyi di model atau helper
 
-Struktur project tidak mengikuti Laravel konvensional sepenuhnya.
-Business logic dipisahkan agar tidak tercampur dengan framework.
-
-```
-app/
-├── Http/
-│   ├── Controllers/
-│   └── Requests/
-│
-├── Domain/
-│   ├── Transaction/
-│   │   ├── Entities/
-│   │   ├── ValueObjects/
-│   │   └── Enums/
-│   │
-│   └── Category/
-│
-├── Application/
-│   ├── UseCases/
-│   │   └── Transaction/
-│   │       ├── CreateTransaction.php
-│   │       └── ImportTransaction.php
-│   │
-│   └── DTOs/
-│
-├── Infrastructure/
-│   ├── Persistence/
-│   │   └── Eloquent/
-│   ├── Services/
-│   │   └── OCR/
-│   └── Parsers/
-│
-└── Models/ (Eloquent only, no business logic)
-```
+Jadi bukan sekadar CRUD.
 
 ---
 
-## ⚠️ Design Principles
+## Scope saat ini
 
-Project ini mengikuti aturan ketat:
+Saat ini masih di tahap awal, fokus ke fondasi:
 
-* Controller **tidak boleh berisi business logic**
-* Validasi **harus menggunakan FormRequest**
-* Query kompleks **tidak boleh di controller**
-* Business rules **harus di Use Case / Service**
-* Model hanya untuk representasi data (bukan tempat logika bisnis utama)
+* pencatatan transaksi (income & expense)
+* kategori transaksi
+* laporan sederhana
 
-Jika ada pelanggaran, itu dianggap **design flaw**, bukan sekadar "style issue".
+Belum ada fitur kompleks, karena prioritasnya memastikan struktur sudah benar sebelum scaling.
 
 ---
 
-## ✨ Features (Current)
+## Rencana pengembangan
 
-* [x] Basic transaction management
-* [x] Category management
-* [x] Daily report (basic)
+Beberapa fitur yang akan ditambahkan:
 
----
+* import transaksi dari file (CSV / Excel)
+* parsing struk belanja (OCR)
+* dashboard analytics
+* budgeting
 
-## 🧪 Features (Planned)
-
-* [ ] Import transaksi dari file (CSV / Excel)
-* [ ] OCR struk belanja → auto parsing transaksi
-* [ ] Dashboard analytics
-* [ ] Budgeting system
-* [ ] Scheduled financial summary
+Fitur-fitur ini sengaja direncanakan dari awal supaya arsitekturnya tidak mentok di tengah jalan.
 
 ---
 
-## 🔄 Example Flow
+## Pendekatan arsitektur
 
-**Create Transaction Flow:**
+Struktur project tidak sepenuhnya mengikuti default Laravel.
 
-```
-Request → FormRequest → Controller → UseCase → Domain → Repository → Database
-```
+Saya memisahkan beberapa layer:
+
+* **Http Layer**
+  Controller dan FormRequest, hanya handle request/response
+
+* **Application Layer**
+  Use case (misalnya CreateTransaction), berisi alur bisnis
+
+* **Domain Layer**
+  Entity, value object, dan aturan bisnis inti
+
+* **Infrastructure Layer**
+  Implementasi teknis seperti database (Eloquent), parser, dll
+
+Intinya:
+
+* controller tidak boleh berisi business logic
+* validasi wajib di FormRequest
+* query tidak ditulis sembarangan di controller
+* logic utama tidak ditaruh di model
+
+Kalau aturan ini dilanggar, biasanya akan jadi masalah saat fitur mulai kompleks.
 
 ---
 
-## ⚙️ Installation
+## Contoh flow
+
+Create transaksi kira-kira seperti ini:
+
+Request → FormRequest → Controller → Use Case → Model/Repository → Database
+
+Controller hanya jadi penghubung, bukan tempat logika.
+
+---
+
+## Setup
 
 ```bash
 git clone https://gitlab.com/your-username/money-management-app.git
@@ -125,36 +101,9 @@ php artisan serve
 
 ---
 
-## 🧠 Why This Project Matters
+## Catatan
 
-Banyak project Laravel hanya fokus "biar jalan", tapi sulit di-scale dan di-maintain.
+Project ini masih berkembang.
+Beberapa bagian mungkin akan berubah seiring kebutuhan fitur yang lebih kompleks.
 
-Project ini mencoba menyelesaikan masalah tersebut dengan:
-
-* Struktur yang eksplisit
-* Dependency flow yang jelas
-* Minim coupling ke framework
-* Mudah ditest dan dikembangkan
-
----
-
-## 📸 Future Direction (Portfolio)
-
-Project ini akan berkembang menjadi:
-
-* Showcase implementasi OCR di Laravel
-* Studi kasus clean architecture di project nyata
-* Sistem yang mendekati production-grade
-
----
-
-## 🤝 Contributing
-
-Saat ini project masih dalam tahap pengembangan pribadi.
-Namun struktur dan standar code dibuat agar mudah dikembangkan secara tim.
-
----
-
-## 📄 License
-
-MIT License
+Fokus utama bukan cepat selesai, tapi memastikan fondasi tetap konsisten saat sistem tumbuh.
