@@ -1,58 +1,160 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 💰 Money Management App
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplikasi manajemen keuangan pribadi berbasis Laravel yang dirancang dengan pendekatan **clean architecture** dan **separation of concerns** yang jelas.
+Project ini tidak hanya berfokus pada fitur, tetapi juga pada **desain sistem yang scalable dan maintainable**.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🚀 Goals
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+* Membantu pengguna mencatat pemasukan & pengeluaran
+* Memberikan insight finansial melalui laporan
+* Menjadi portfolio yang menunjukkan:
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+  * Clean Architecture di Laravel
+  * Best practice separation of concerns
+  * Extensible system (OCR, automation, dll)
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+## 🧱 Tech Stack
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+* **Backend**: Laravel 13
+* **Database**: MySQL / PostgreSQL
+* **Architecture Style**: Clean Architecture (Controller → Use Case / Service → Domain)
+* **Authentication**: Laravel Sanctum (planned)
+* **Queue (planned)**: Redis
+* **OCR (planned)**: Tesseract / API-based OCR
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+---
 
-## Agentic Development
+## 📂 Project Structure
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+Struktur project tidak mengikuti Laravel konvensional sepenuhnya.
+Business logic dipisahkan agar tidak tercampur dengan framework.
 
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```
+app/
+├── Http/
+│   ├── Controllers/
+│   └── Requests/
+│
+├── Domain/
+│   ├── Transaction/
+│   │   ├── Entities/
+│   │   ├── ValueObjects/
+│   │   └── Enums/
+│   │
+│   └── Category/
+│
+├── Application/
+│   ├── UseCases/
+│   │   └── Transaction/
+│   │       ├── CreateTransaction.php
+│   │       └── ImportTransaction.php
+│   │
+│   └── DTOs/
+│
+├── Infrastructure/
+│   ├── Persistence/
+│   │   └── Eloquent/
+│   ├── Services/
+│   │   └── OCR/
+│   └── Parsers/
+│
+└── Models/ (Eloquent only, no business logic)
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+## ⚠️ Design Principles
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Project ini mengikuti aturan ketat:
 
-## Code of Conduct
+* Controller **tidak boleh berisi business logic**
+* Validasi **harus menggunakan FormRequest**
+* Query kompleks **tidak boleh di controller**
+* Business rules **harus di Use Case / Service**
+* Model hanya untuk representasi data (bukan tempat logika bisnis utama)
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Jika ada pelanggaran, itu dianggap **design flaw**, bukan sekadar "style issue".
 
-## Security Vulnerabilities
+---
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## ✨ Features (Current)
 
-## License
+* [x] Basic transaction management
+* [x] Category management
+* [x] Daily report (basic)
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+
+## 🧪 Features (Planned)
+
+* [ ] Import transaksi dari file (CSV / Excel)
+* [ ] OCR struk belanja → auto parsing transaksi
+* [ ] Dashboard analytics
+* [ ] Budgeting system
+* [ ] Scheduled financial summary
+
+---
+
+## 🔄 Example Flow
+
+**Create Transaction Flow:**
+
+```
+Request → FormRequest → Controller → UseCase → Domain → Repository → Database
+```
+
+---
+
+## ⚙️ Installation
+
+```bash
+git clone https://gitlab.com/your-username/money-management-app.git
+cd money-management-app
+
+composer install
+cp .env.example .env
+php artisan key:generate
+
+php artisan migrate
+php artisan serve
+```
+
+---
+
+## 🧠 Why This Project Matters
+
+Banyak project Laravel hanya fokus "biar jalan", tapi sulit di-scale dan di-maintain.
+
+Project ini mencoba menyelesaikan masalah tersebut dengan:
+
+* Struktur yang eksplisit
+* Dependency flow yang jelas
+* Minim coupling ke framework
+* Mudah ditest dan dikembangkan
+
+---
+
+## 📸 Future Direction (Portfolio)
+
+Project ini akan berkembang menjadi:
+
+* Showcase implementasi OCR di Laravel
+* Studi kasus clean architecture di project nyata
+* Sistem yang mendekati production-grade
+
+---
+
+## 🤝 Contributing
+
+Saat ini project masih dalam tahap pengembangan pribadi.
+Namun struktur dan standar code dibuat agar mudah dikembangkan secara tim.
+
+---
+
+## 📄 License
+
+MIT License
