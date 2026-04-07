@@ -20,11 +20,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 ])]
 class Transaction extends Model
 {
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [
@@ -33,49 +28,74 @@ class Transaction extends Model
         ];
     }
 
-    /**
-     * Get the user that owns the transaction.
-     */
+    /* ---------- Accessors ---------- */
+
+    public function getFormattedAmountAttribute(): string
+    {
+        return 'Rp ' . number_format(abs($this->amount), 0, ',', '.');
+    }
+
+    public function getFormattedDateAttribute(): string
+    {
+        return $this->transaction_date
+            ? $this->transaction_date->translatedFormat('d M Y')
+            : '-';
+    }
+
+    public function getTypeAttribute(): string
+    {
+        return $this->amount >= 0 ? 'income' : 'expense';
+    }
+
+    /* ---------- Scopes ---------- */
+
+    public function scopeForUser($query, int $userId)
+    {
+        return $query->where('user_id', $userId);
+    }
+
+    public function scopeIncome($query)
+    {
+        return $query->where('amount', '>', 0);
+    }
+
+    public function scopeExpense($query)
+    {
+        return $query->where('amount', '<', 0);
+    }
+
+    public function scopeRecent($query, int $limit = 5)
+    {
+        return $query->orderByDesc('transaction_date')->orderByDesc('id')->limit($limit);
+    }
+
+    /* ---------- Relations ---------- */
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    /**
-     * Get the wallet for this transaction.
-     */
     public function wallet(): BelongsTo
     {
         return $this->belongsTo(Wallet::class);
     }
 
-    /**
-     * Get the category for this transaction.
-     */
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
     }
 
-    /**
-     * Get the event associated with this transaction.
-     */
     public function event(): BelongsTo
     {
         return $this->belongsTo(Event::class);
     }
 
-    /**
-     * Get the draft that created this transaction.
-     */
     public function draft(): BelongsTo
     {
         return $this->belongsTo(TransactionDraft::class, 'draft_id');
     }
 
-    /**
-     * Get the receipt linked to this transaction.
-     */
     public function receipt(): BelongsTo
     {
         return $this->belongsTo(Receipt::class);

@@ -990,17 +990,127 @@
        border-radius: 10px;
    }
 
+   /* ============================================================
+    * SIDEBAR — Collapse Toggle (Desktop)
+    * ============================================================ */
+   :root {
+       --sidebar-collapsed-width: 60px;
+       --color-border-soft: #f0f2f5;
+       --color-primary: #1d6a4a;
+   }
+
+   .sidebar { transition: width .22s ease, min-width .22s ease; overflow: visible; }
+
+   .sidebar-collapse-btn {
+       position: absolute;
+       top: 16px;
+       right: -14px;
+       width: 28px;
+       height: 28px;
+       background: var(--bg-card);
+       border: 1px solid var(--color-border);
+       border-radius: 50%;
+       display: flex;
+       align-items: center;
+       justify-content: center;
+       cursor: pointer;
+       color: var(--color-muted);
+       font-size: 13px;
+       z-index: 110;
+       box-shadow: var(--shadow-sm);
+       transition: color var(--ease), box-shadow var(--ease);
+   }
+
+   .sidebar-collapse-btn:hover {
+       color: var(--color-ink);
+       box-shadow: var(--shadow-md);
+   }
+
+   .main-area { transition: margin-left .22s ease; }
+
+   @media (min-width: 769px) {
+       body.sidebar-collapsed .sidebar { width: var(--sidebar-collapsed-width); min-width: var(--sidebar-collapsed-width); overflow: visible; }
+       body.sidebar-collapsed .main-area { margin-left: var(--sidebar-collapsed-width); }
+       body.sidebar-collapsed .sidebar .brand-name,
+       body.sidebar-collapsed .sidebar .sidebar-section-label,
+       body.sidebar-collapsed .sidebar .nav-label,
+       body.sidebar-collapsed .sidebar .badge-pill,
+       body.sidebar-collapsed .sidebar .user-info,
+       body.sidebar-collapsed .sidebar .chevron { display: none; }
+       body.sidebar-collapsed .sidebar .sidebar-brand { justify-content: center; padding: 20px 0 16px; }
+       body.sidebar-collapsed .sidebar .sidebar-nav .nav-item { padding: 2px 6px; }
+       body.sidebar-collapsed .sidebar .sidebar-nav .nav-link { justify-content: center; padding: 10px; gap: 0; }
+       body.sidebar-collapsed .sidebar .sidebar-nav .nav-link i { width: auto; font-size: 17px; }
+       body.sidebar-collapsed .sidebar .sidebar-footer { padding: 10px 6px; }
+       body.sidebar-collapsed .sidebar .sidebar-user { justify-content: center; padding: 8px 6px; }
+   }
+
+   /* ============================================================
+    * MOBILE — Offcanvas Sidebar
+    * ============================================================ */
+   .sidebar-overlay {
+       display: none;
+       position: fixed;
+       inset: 0;
+       background: rgba(0,0,0,.45);
+       z-index: 99;
+       opacity: 0;
+       transition: opacity .25s ease;
+   }
+
+   .sidebar-overlay.active { display: block; opacity: 1; }
+
+   .mobile-menu-btn {
+       display: none;
+       width: 36px; height: 36px;
+       border: 1px solid var(--color-border);
+       border-radius: 8px;
+       background: transparent;
+       color: var(--color-muted);
+       font-size: 18px;
+       align-items: center;
+       justify-content: center;
+       cursor: pointer;
+       flex-shrink: 0;
+       transition: background var(--ease), color var(--ease);
+   }
+
+   .mobile-menu-btn:hover { background: var(--bg-base); color: var(--color-ink); }
+
    @media (max-width: 768px) {
        .sidebar {
            transform: translateX(-100%);
-           transition: transform .25s ease;
+           transition: transform .28s cubic-bezier(.4,0,.2,1);
+           z-index: 200;
+           width: var(--sidebar-width) !important;
+           min-width: var(--sidebar-width) !important;
        }
 
-       .sidebar.open {
-           transform: translateX(0);
-       }
-
-       .main-area {
-           margin-left: 0;
-       }
+       .sidebar.sidebar-open { transform: translateX(0); }
+       .main-area { margin-left: 0 !important; }
+       .mobile-menu-btn { display: flex; }
+       .sidebar-collapse-btn { display: none; }
+       .navbar-date-range { display: none; }
+       .page-content { padding: 16px; }
+       .summary-card .card-amount { font-size: 18px; }
+       .dp-pagination { flex-wrap: wrap; gap: 6px; }
    }
+
+   @media (max-width: 480px) {
+       .table-card-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+       .top-navbar { padding: 0 14px; gap: 8px; }
+       .page-content { padding: 12px; }
+   }
+
+   /* ============================================================
+    * ALERT IMPROVEMENTS
+    * ============================================================ */
+   .alert { border-radius: var(--radius); font-size: 13.5px; font-weight: 500; }
+   .alert-success { background: var(--color-income-bg); border-color: var(--color-income-ring); color: var(--color-income); }
+   .alert-danger  { background: var(--color-expense-bg); border-color: var(--color-expense-ring); color: var(--color-expense); }
+
+   /* ============================================================
+    * PAGINATION — link variant
+    * ============================================================ */
+   .dp-pagination a.page-btn { text-decoration: none; }
+   .dp-pagination .page-btn.disabled { opacity: .4; pointer-events: none; }

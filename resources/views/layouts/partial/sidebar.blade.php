@@ -1,39 +1,75 @@
 <aside class="sidebar" id="sidebar">
-    <a href="#" class="sidebar-brand" onclick="return false;">
+    <div class="sidebar-collapse-btn" id="sidebarCollapseBtn" title="Collapse sidebar">
+        <i class="bi bi-layout-sidebar-reverse"></i>
+    </div>
+
+    <a href="{{ route('dashboard.index') }}" class="sidebar-brand">
         <div class="brand-icon"><i class="bi bi-wallet-fill"></i></div>
         <span class="brand-name">Dom<span>petra</span></span>
     </a>
+
     <span class="sidebar-section-label">Menu Utama</span>
     <ul class="sidebar-nav">
-        <li class="nav-item"><a href="#" class="nav-link active" data-page="dashboard"><i
-                    class="bi bi-grid-1x2-fill"></i> Dasbor</a></li>
-        <li class="nav-item"><a href="#" class="nav-link" data-page="transaksi"><i class="bi bi-arrow-left-right"></i>
-                Transaksi <span class="badge-pill">24</span></a></li>
-        <li class="nav-item"><a href="#" class="nav-link" data-page=""><i class="bi bi-tag-fill"></i>
-                Kategori</a></li>
+        <li class="nav-item">
+            <a href="{{ route('dashboard.index') }}"
+               class="nav-link {{ request()->routeIs('dashboard*') ? 'active' : '' }}">
+                <i class="bi bi-grid-1x2-fill"></i>
+                <span class="nav-label">Dashboard</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('wallet.index') }}"
+               class="nav-link {{ request()->routeIs('wallet*') ? 'active' : '' }}">
+                <i class="bi bi-wallet2"></i>
+                <span class="nav-label">Dompet</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('category.index') }}"
+               class="nav-link {{ request()->routeIs('category*') ? 'active' : '' }}">
+                <i class="bi bi-tag-fill"></i>
+                <span class="nav-label">Kategori</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('transaction.index') }}"
+               class="nav-link {{ request()->routeIs('transaction*') ? 'active' : '' }}">
+                <i class="bi bi-arrow-left-right"></i>
+                <span class="nav-label">Transaksi</span>
+            </a>
+        </li>
     </ul>
+
     <span class="sidebar-section-label">Analitik</span>
     <ul class="sidebar-nav">
-        <li class="nav-item"><a href="#" class="nav-link" data-page=""><i class="bi bi-bar-chart-line-fill"></i>
-                Laporan</a></li>
-        <li class="nav-item"><a href="#" class="nav-link" data-page=""><i class="bi bi-cloud-upload-fill"></i>
-                Impor / OCR</a></li>
-        <li class="nav-item"><a href="#" class="nav-link" data-page=""><i class="bi bi-bullseye"></i> Target
-                Tabungan</a></li>
+        <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-bar-chart-line-fill"></i><span class="nav-label">Laporan</span></a></li>
+        <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-cloud-upload-fill"></i><span class="nav-label">Impor / OCR</span></a></li>
+        <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-bullseye"></i><span class="nav-label">Target Tabungan</span></a></li>
     </ul>
+
     <span class="sidebar-section-label">Pengaturan</span>
     <ul class="sidebar-nav">
-        <li class="nav-item"><a href="#" class="nav-link" data-page=""><i class="bi bi-gear-fill"></i>
-                Pengaturan</a></li>
+        <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-gear-fill"></i><span class="nav-label">Pengaturan</span></a></li>
     </ul>
+
     <div class="sidebar-footer">
         <div class="sidebar-user">
-            <div class="avatar">BR</div>
+            @php
+                $nameParts = explode(' ', auth()->user()->name);
+                $initials = isset($nameParts[1])
+                    ? substr($nameParts[0], 0, 1) . substr($nameParts[1], 0, 1)
+                    : substr($nameParts[0], 0, 2);
+                $initials = strtoupper($initials);
+            @endphp
+            <div class="avatar">{{ $initials }}</div>
             <div class="user-info">
-                <div class="user-name">Budi Raharjo</div>
-                <div class="user-email">budi@dompetra.id</div>
+                <div class="user-name">{{ auth()->user()->name }}</div>
+                <div class="user-email">{{ auth()->user()->email }}</div>
             </div>
             <i class="bi bi-chevron-expand chevron"></i>
         </div>
     </div>
 </aside>
+
+{{-- Mobile overlay backdrop --}}
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
