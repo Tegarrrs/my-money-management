@@ -14,7 +14,7 @@ class CreateWallet
             'type'                   => $data['type'],
             'icon'                   => $data['icon'] ?? null,
             'color'                  => $data['color'] ?? null,
-            'balance'                => 0, // balance always starts at 0
+            'balance'                => (float) ($data['initial_balance'] ?? 0),
             'allow_negative_balance' => $data['allow_negative_balance'] ?? false,
         ]);
     }

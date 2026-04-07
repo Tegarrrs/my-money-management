@@ -17,14 +17,9 @@ class StoreTransactionRequest extends FormRequest
         $userId = $this->user()->id;
 
         return [
-            'wallet_id'        => [
-                'required',
-                Rule::exists('wallets', 'id')->where('user_id', $userId),
-            ],
-            'category_id'      => [
-                'required',
-                Rule::exists('categories', 'id')->where('user_id', $userId),
-            ],
+            'wallet_id'        => ['required', Rule::exists('wallets', 'id')->where('user_id', $userId)],
+            'category_id'      => ['nullable', Rule::exists('categories', 'id')->where('user_id', $userId)],
+            'type'             => ['required', 'in:income,expense'],
             'amount'           => ['required', 'numeric', 'min:1'],
             'description'      => ['nullable', 'string', 'max:255'],
             'transaction_date' => ['required', 'date'],

@@ -45,7 +45,7 @@
                                     <td style="color:var(--color-muted);font-size:12px;">{{ $cat->transactions()->count() }} transaksi</td>
                                     <td class="text-end" style="white-space:nowrap;">
                                         <button class="btn-outline-dp py-1 px-2 me-1" style="font-size:12px;"
-                                            onclick="editCategory({{ $cat->id }}, '{{ addslashes($cat->name) }}', '{{ $cat->type }}', '{{ $cat->icon }}')"
+                                            onclick="editCategory({{ $cat->id }}, '{{ addslashes($cat->name) }}', '{{ $cat->type }}')"
                                             data-bs-toggle="modal" data-bs-target="#categoryModal">
                                             <i class="bi bi-pencil"></i>
                                         </button>
@@ -91,7 +91,7 @@
                                     <td style="color:var(--color-muted);font-size:12px;">{{ $cat->transactions()->count() }} transaksi</td>
                                     <td class="text-end" style="white-space:nowrap;">
                                         <button class="btn-outline-dp py-1 px-2 me-1" style="font-size:12px;"
-                                            onclick="editCategory({{ $cat->id }}, '{{ addslashes($cat->name) }}', '{{ $cat->type }}', '{{ $cat->icon }}')"
+                                            onclick="editCategory({{ $cat->id }}, '{{ addslashes($cat->name) }}', '{{ $cat->type }}')"
                                             data-bs-toggle="modal" data-bs-target="#categoryModal">
                                             <i class="bi bi-pencil"></i>
                                         </button>
@@ -143,11 +143,6 @@
                             </div>
                             <input type="hidden" name="type" id="cType" value="expense">
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Ikon (Bootstrap Icons)</label>
-                            <input type="text" name="icon" id="cIcon" class="form-control"
-                                   placeholder="cth. bi-cart">
-                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn-outline-dp" data-bs-dismiss="modal">Batal</button>
@@ -173,11 +168,10 @@ function openCreate(defaultType) {
     selectCatType(defaultType);
 }
 
-function editCategory(id, name, type, icon) {
+function editCategory(id, name, type) {
     resetCategoryModal();
     document.getElementById('categoryModalTitle').textContent = 'Edit Kategori';
     document.getElementById('cName').value = name;
-    document.getElementById('cIcon').value = icon || '';
     selectCatType(type);
 
     const form = document.getElementById('categoryForm');

@@ -16,25 +16,23 @@ class CreateTransaction
     public function execute(User $user, array $data): Transaction
     {
         return DB::transaction(function () use ($user, $data) {
-            /** @var Category $category */
-            $category = Category::findOrFail($data['category_id']);
+            /** @var ?Category $category */
+            $category = isset($data['category_id']) ? Category::find($data['category_id']) : null;
 
             /** @var Wallet $wallet */
             $wallet = Wallet::findOrFail($data['wallet_id']);
 
-            // Normalise amount: income positive, expense negative
-            $amount = $this->parser->normaliseAmount((float) $data['amount'], $category);
+            // Normalise: category type takes priority, else explicit type field
+            $amount = $this->parser->normaliseAmount((float) $data['amount'], $category, $data['type'] ?? 'expense');
 
-            // Create the transaction
             $transaction = $user->transactions()->create([
                 'wallet_id'        => $wallet->id,
-                'category_id'      => $category->id,
+                'category_id'      => $category?->id,
                 'amount'           => $amount,
                 'description'      => $data['description'] ?? null,
                 'transaction_date' => $data['transaction_date'],
             ]);
 
-            // Update wallet balance
             $wallet->increment('balance', $amount);
 
             return $transaction;

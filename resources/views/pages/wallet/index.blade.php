@@ -51,7 +51,7 @@
                                 <div class="d-flex gap-1">
                                     <button class="btn-outline-dp py-1 px-2"
                                         style="font-size:12px;"
-                                        onclick="editWallet({{ $wallet->id }}, '{{ addslashes($wallet->name) }}', '{{ $wallet->type }}', '{{ $wallet->icon }}', '{{ $wallet->color }}', {{ $wallet->allow_negative_balance ? 'true' : 'false' }})"
+                                        onclick="editWallet({{ $wallet->id }}, '{{ addslashes($wallet->name) }}', '{{ $wallet->type }}', '{{ $wallet->icon }}', '{{ $wallet->color }}', {{ $wallet->allow_negative_balance ? 'true' : 'false' }}, {{ $wallet->balance }})"
                                         title="Edit">
                                         <i class="bi bi-pencil"></i>
                                     </button>
@@ -110,6 +110,12 @@
                                    placeholder="cth. bi-wallet2">
                         </div>
                         <div class="mb-3">
+                            <label class="form-label" id="wBalanceLabel">Saldo Awal (Rp)</label>
+                            <input type="number" name="initial_balance" id="wBalance" class="form-control"
+                                   placeholder="0" min="0" value="0">
+                            <div class="form-text" id="wBalanceHint">Isi jika dompet sudah punya saldo sebelumnya.</div>
+                        </div>
+                        <div class="mb-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="allow_negative_balance"
                                        id="wAllowNeg" value="1">
@@ -133,12 +139,15 @@
 
 @push('js')
 <script>
-function editWallet(id, name, type, icon, color, allowNeg) {
+function editWallet(id, name, type, icon, color, allowNeg, balance) {
     document.getElementById('walletModalTitle').textContent = 'Edit Dompet';
-    document.getElementById('wName').value = name;
-    document.getElementById('wType').value = type;
-    document.getElementById('wIcon').value = icon || '';
+    document.getElementById('wName').value    = name;
+    document.getElementById('wType').value    = type;
+    document.getElementById('wIcon').value    = icon || '';
     document.getElementById('wAllowNeg').checked = allowNeg;
+    document.getElementById('wBalance').value = balance ?? 0;
+    document.getElementById('wBalanceLabel').textContent = 'Koreksi Saldo (Rp)';
+    document.getElementById('wBalanceHint').textContent  = 'Ubah hanya jika perlu koreksi saldo manual.';
 
     const form = document.getElementById('walletForm');
     form.action = '/wallet/' + id;
@@ -149,6 +158,9 @@ function editWallet(id, name, type, icon, color, allowNeg) {
 
 document.getElementById('walletModal').addEventListener('hidden.bs.modal', function () {
     document.getElementById('walletForm').reset();
+    document.getElementById('wBalance').value = 0;
+    document.getElementById('wBalanceLabel').textContent = 'Saldo Awal (Rp)';
+    document.getElementById('wBalanceHint').textContent  = 'Isi jika dompet sudah punya saldo sebelumnya.';
     document.getElementById('walletForm').action = '{{ route('wallet.store') }}';
     document.getElementById('walletMethodField').innerHTML = '';
     document.getElementById('walletModalTitle').textContent = 'Tambah Dompet';

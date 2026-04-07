@@ -15,11 +15,12 @@ class TransactionParser
      * - income  → positive
      * - expense → negative
      */
-    public function normaliseAmount(float $rawAmount, Category $category): float
+    public function normaliseAmount(float $rawAmount, ?Category $category, string $type = 'expense'): float
     {
         $abs = abs($rawAmount);
+        $resolvedType = $category?->type ?? $type;
 
-        return $category->type === 'income' ? $abs : -$abs;
+        return $resolvedType === 'income' ? $abs : -$abs;
     }
 
     /**

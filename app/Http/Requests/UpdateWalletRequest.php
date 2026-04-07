@@ -18,6 +18,7 @@ class UpdateWalletRequest extends FormRequest
             'type'                   => ['required', 'string', 'in:cash,bank,e-wallet,investment,other'],
             'icon'                   => ['nullable', 'string', 'max:50'],
             'color'                  => ['nullable', 'string', 'max:20'],
+            'initial_balance'        => ['nullable', 'numeric'],
             'allow_negative_balance' => ['boolean'],
         ];
     }

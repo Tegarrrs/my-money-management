@@ -113,7 +113,7 @@
                             </td>
                             <td class="text-end" style="white-space:nowrap;">
                                 <button class="btn-outline-dp py-1 px-2 me-1" style="font-size:12px;"
-                                    onclick="editTx({{ $tx->id }}, '{{ addslashes($tx->description ?? '') }}', {{ abs($tx->amount) }}, '{{ $tx->transaction_date->format('Y-m-d') }}', {{ $tx->wallet_id ?? 'null' }}, {{ $tx->category_id ?? 'null' }})"
+                                    onclick="editTx({{ $tx->id }}, '{{ addslashes($tx->description ?? '') }}', {{ abs($tx->amount) }}, '{{ $tx->transaction_date->format('Y-m-d') }}', {{ $tx->wallet_id ?? 'null' }}, {{ $tx->category_id ?? 'null' }}, '{{ $isIncome ? 'income' : 'expense' }}')"
                                     data-bs-toggle="modal" data-bs-target="#txModal"
                                     title="Edit">
                                     <i class="bi bi-pencil"></i>
@@ -179,9 +179,21 @@
                     <span id="txMethodField"></span>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label">Kategori <span class="text-danger">*</span></label>
-                            <select name="category_id" id="txCategory" class="form-select" required onchange="updateTypeFromCategory()">
-                                <option value="">Pilih kategori…</option>
+                            <label class="form-label">Jenis Transaksi <span class="text-danger">*</span></label>
+                            <div class="type-toggle">
+                                <div class="type-btn" id="txTypeExpense" onclick="selectTxType('expense')">
+                                    <i class="bi bi-arrow-up-right me-1"></i> Pengeluaran
+                                </div>
+                                <div class="type-btn" id="txTypeIncome" onclick="selectTxType('income')">
+                                    <i class="bi bi-arrow-down-left me-1"></i> Pemasukan
+                                </div>
+                            </div>
+                            <input type="hidden" name="type" id="txType" value="expense">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Kategori <span style="color:var(--color-muted);font-size:12px;">(opsional – akan diisi AI nanti)</span></label>
+                            <select name="category_id" id="txCategory" class="form-select" onchange="updateTypeFromCategory()">
+                                <option value="">— Tanpa kategori —</option>
                                 @if($categories->where('type','expense')->isNotEmpty())
                                     <optgroup label="Pengeluaran">
                                         @foreach($categories->where('type','expense') as $cat)
@@ -197,12 +209,6 @@
                                     </optgroup>
                                 @endif
                             </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Jenis Transaksi</label>
-                            <div class="type-toggle">
-                                <div class="type-btn expense-active" id="txTypeBadge">— ditentukan oleh kategori —</div>
-                            </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Dompet <span class="text-danger">*</span></label>
@@ -245,34 +251,27 @@
 
 @push('js')
 <script>
+function selectTxType(type) {
+    document.getElementById('txType').value = type;
+    document.getElementById('txTypeExpense').className = 'type-btn' + (type === 'expense' ? ' expense-active' : '');
+    document.getElementById('txTypeIncome').className  = 'type-btn' + (type === 'income'  ? ' income-active'  : '');
+}
+
 function updateTypeFromCategory() {
-    const sel = document.getElementById('txCategory');
-    const opt = sel.options[sel.selectedIndex];
-    const type = opt ? opt.getAttribute('data-type') : null;
-    const badge = document.getElementById('txTypeBadge');
-
-    if (type === 'income') {
-        badge.className = 'type-btn income-active';
-        badge.innerHTML = '<i class="bi bi-arrow-down-left me-1"></i> Pemasukan';
-    } else if (type === 'expense') {
-        badge.className = 'type-btn expense-active';
-        badge.innerHTML = '<i class="bi bi-arrow-up-right me-1"></i> Pengeluaran';
-    } else {
-        badge.className = 'type-btn';
-        badge.innerHTML = '— ditentukan oleh kategori —';
-    }
+    const sel  = document.getElementById('txCategory');
+    const type = sel.options[sel.selectedIndex]?.getAttribute('data-type');
+    if (type) selectTxType(type);
 }
 
-function openCreate() {
-    resetTxModal();
-}
+function openCreate() { resetTxModal(); }
 
-function editTx(id, desc, amount, date, walletId, categoryId) {
+function editTx(id, desc, amount, date, walletId, categoryId, type) {
     resetTxModal();
     document.getElementById('txModalTitle').textContent = 'Edit Transaksi';
-    document.getElementById('txDesc').value  = desc;
+    document.getElementById('txDesc').value   = desc;
     document.getElementById('txAmount').value = amount;
-    document.getElementById('txDate').value  = date;
+    document.getElementById('txDate').value   = date;
+    selectTxType(type || 'expense');
 
     if (walletId)   document.getElementById('txWallet').value   = walletId;
     if (categoryId) {
@@ -291,9 +290,10 @@ function resetTxModal() {
     document.getElementById('txForm').action = '{{ route('transaction.store') }}';
     document.getElementById('txMethodField').innerHTML = '';
     document.getElementById('txDate').value = '{{ now()->format('Y-m-d') }}';
-    updateTypeFromCategory();
+    selectTxType('expense');
 }
 
 document.getElementById('txModal').addEventListener('hidden.bs.modal', resetTxModal);
+selectTxType('expense');
 </script>
 @endpush

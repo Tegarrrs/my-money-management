@@ -11,7 +11,6 @@ class UpdateCategory
         $category->update([
             'name' => $data['name'],
             'type' => $data['type'],
-            'icon' => $data['icon'] ?? $category->icon,
         ]);
 
         return $category->fresh();

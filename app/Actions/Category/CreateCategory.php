@@ -12,7 +12,6 @@ class CreateCategory
         return $user->categories()->create([
             'name' => $data['name'],
             'type' => $data['type'],
-            'icon' => $data['icon'] ?? null,
         ]);
     }
 }
