@@ -76,9 +76,11 @@
                         <i class="bi bi-plus-lg"></i> Tambah
                     </button>
                 </div>
-                <div class="table-responsive">
+             <div class="table-responsive" style="max-height:350px;overflow-y:auto;">
                     <table class="table dompetra-table">
-                        <thead><tr><th>Nama</th><th>Transaksi</th><th></th></tr></thead>
+                 <thead style="position:sticky;top:0;z-index:1;background:var(--bs-body-bg, #fff);">
+    <tr><th>Nama</th><th>Transaksi</th><th></th></tr>
+</thead>
                         <tbody>
                             @forelse($categories->where('type','expense') as $cat)
                                 <tr>

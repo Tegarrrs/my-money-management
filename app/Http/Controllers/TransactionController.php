@@ -11,19 +11,49 @@ use App\Models\Category;
 use App\Models\Transaction;
 use App\Models\Wallet;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class TransactionController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
         $userId = auth()->id();
 
-        $transactions = Transaction::with(['category', 'wallet'])
+        $query = Transaction::with(['category', 'wallet'])
             ->forUser($userId)
             ->orderByDesc('transaction_date')
-            ->orderByDesc('id')
-            ->paginate(15);
+            ->orderByDesc('id');
+
+        // Filters
+        if ($request->filled('date_from')) {
+            $query->where('transaction_date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->where('transaction_date', '<=', $request->date_to);
+        }
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+        if ($request->filled('wallet_id')) {
+            $query->where('wallet_id', $request->wallet_id);
+        }
+        if ($request->filled('type')) {
+            match ($request->type) {
+                'income'   => $query->where('amount', '>', 0)->whereNull('transfer_group_id'),
+                'expense'  => $query->where('amount', '<', 0)->whereNull('transfer_group_id'),
+                'transfer' => $query->whereNotNull('transfer_group_id')->where('amount', '<', 0), // show only debit leg
+                default    => null,
+            };
+        } else {
+            // By default exclude the "credit leg" of transfers to avoid duplicates
+            $query->where(function ($q) {
+                $q->whereNull('transfer_group_id')
+                  ->orWhere('amount', '<', 0); // only show debit leg of transfers
+            });
+        }
+
+        $transactions = $query->paginate(15)->withQueryString();
 
         $wallets    = Wallet::forUser($userId)->orderBy('name')->get();
         $categories = Category::forUser($userId)->orderBy('type')->orderBy('name')->get();

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ImportTransactionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WalletController;
@@ -38,6 +39,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/', [TransactionController::class, 'store'])->name('store');
         Route::put('/{transaction}', [TransactionController::class, 'update'])->name('update');
         Route::delete('/{transaction}', [TransactionController::class, 'destroy'])->name('destroy');
+    });
+
+    // Import
+    Route::prefix('import')->name('import.')->group(function () {
+        Route::get('/', [ImportTransactionController::class, 'show'])->name('show');
+        Route::post('/preview', [ImportTransactionController::class, 'preview'])->name('preview');
+        Route::post('/store', [ImportTransactionController::class, 'store'])->name('store');
     });
 
     // Profile

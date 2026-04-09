@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'category_id',
     'amount',
     'description',
+    'detail',
     'transaction_date',
     'event_id',
     'transfer_group_id',
@@ -56,12 +57,17 @@ class Transaction extends Model
 
     public function scopeIncome($query)
     {
-        return $query->where('amount', '>', 0);
+        return $query->where('amount', '>', 0)->whereNull('transfer_group_id');
     }
 
     public function scopeExpense($query)
     {
-        return $query->where('amount', '<', 0);
+        return $query->where('amount', '<', 0)->whereNull('transfer_group_id');
+    }
+
+    public function scopeTransfer($query)
+    {
+        return $query->whereNotNull('transfer_group_id');
     }
 
     public function scopeRecent($query, int $limit = 5)
