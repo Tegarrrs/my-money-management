@@ -35,7 +35,7 @@ class CreateTransaction
                     'wallet_id'         => $fromWallet->id,
                     'category_id'       => null,
                     'amount'            => -$amount,
-                    'description'       => $desc,
+                    'description'       => $desc ?? "Transfer ke {$toWallet->name}",
                     'detail'            => $detail,
                     'transaction_date'  => $date,
                     'transfer_group_id' => $groupId,
@@ -46,7 +46,7 @@ class CreateTransaction
                     'wallet_id'         => $toWallet->id,
                     'category_id'       => null,
                     'amount'            => $amount,
-                    'description'       => $desc,
+                    'description'       => $desc ?? "Transfer dari {$fromWallet->name}",
                     'detail'            => $detail,
                     'transaction_date'  => $date,
                     'transfer_group_id' => $groupId,
@@ -54,6 +54,24 @@ class CreateTransaction
 
                 $fromWallet->decrement('balance', $amount);
                 $toWallet->increment('balance', $amount);
+
+                // Handling Biaya Admin
+                if (!empty($data['admin_fee']) && $data['admin_fee'] > 0) {
+                    $adminFee = (float) $data['admin_fee'];
+                    $adminGroup = $groupId; // Let it share the same transfer_group_id to know it's related
+
+                    $user->transactions()->create([
+                        'wallet_id'         => $fromWallet->id,
+                        'category_id'       => null, // Optional: find or create 'Biaya Admin' category
+                        'amount'            => -$adminFee,
+                        'description'       => "Biaya Admin Transfer",
+                        'detail'            => "Biaya admin untuk transfer ke {$toWallet->name}",
+                        'transaction_date'  => $date,
+                        'transfer_group_id' => $adminGroup,
+                    ]);
+
+                    $fromWallet->decrement('balance', $adminFee);
+                }
 
                 return $out;
             }

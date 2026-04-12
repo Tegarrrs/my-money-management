@@ -25,7 +25,8 @@ class StoreTransactionRequest extends FormRequest
             'detail'           => ['nullable', 'string', 'max:1000'],
             'transaction_date' => ['required', 'date'],
             // Transfer-specific
-            'to_wallet_id'     => ['nullable', Rule::exists('wallets', 'id')->where('user_id', $userId)],
+            'to_wallet_id'     => ['nullable', 'required_if:type,transfer', Rule::exists('wallets', 'id')->where('user_id', $userId)],
+            'admin_fee'        => ['nullable', 'numeric', 'min:0'],
         ];
     }
 

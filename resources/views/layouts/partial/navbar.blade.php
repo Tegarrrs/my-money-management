@@ -5,7 +5,7 @@
     </button>
 
     <h1 class="page-title" id="navbar-title">
-        @yield('title', 'Dasbor')
+        @yield('title', 'Dashboard')
         <small id="navbar-subtitle">@yield('subtitle', 'Selamat datang kembali, ' . explode(' ', auth()->user()->name)[0] . ' 👋')</small>
     </h1>
 

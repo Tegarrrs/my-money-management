@@ -3,6 +3,7 @@
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ImportTransactionController;
+use App\Http\Controllers\OCRController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WalletController;
@@ -46,6 +47,16 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [ImportTransactionController::class, 'show'])->name('show');
         Route::post('/preview', [ImportTransactionController::class, 'preview'])->name('preview');
         Route::post('/store', [ImportTransactionController::class, 'store'])->name('store');
+    });
+
+    // Report
+    Route::get('/report', [\App\Http\Controllers\ReportController::class, 'index'])->name('report.index');
+
+    // OCR Import
+    Route::prefix('ocr')->name('ocr.')->group(function () {
+        Route::get('/',        [OCRController::class, 'upload']) ->name('upload');
+        Route::post('/preview',[OCRController::class, 'preview'])->name('preview');
+        Route::post('/store',  [OCRController::class, 'store'])  ->name('store');
     });
 
     // Profile

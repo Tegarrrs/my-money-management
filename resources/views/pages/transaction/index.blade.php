@@ -3,400 +3,7 @@
 @section('title', 'Transaksi')
 @section('subtitle', 'Kelola semua transaksi keuanganmu')
 
-@push('css')
-<style>
-/* ─── Reset & base ─────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; }
 
-/* ─── Filter Bar ───────────────────────────────────────────── */
-.filter-bar {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    padding: 16px 20px;
-    margin-bottom: 16px;
-}
-.filter-bar-label {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: .07em;
-    color: #9ca3af;
-    margin-bottom: 12px;
-}
-.filter-row {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    align-items: flex-end;
-}
-.filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    flex: 1;
-    min-width: 130px;
-}
-.filter-group label {
-    font-size: 12px;
-    font-weight: 500;
-    color: #6b7280;
-}
-.filter-group input,
-.filter-group select {
-    font-size: 13px;
-    padding: 8px 11px;
-    border: 1px solid #e5e7eb;
-    border-radius: 9px;
-    background: #f9fafb;
-    color: #111827;
-    outline: none;
-    width: 100%;
-    transition: border-color .15s, background .15s;
-}
-.filter-group input:focus,
-.filter-group select:focus {
-    border-color: #6366f1;
-    background: #fff;
-}
-.btn-dp {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    border-radius: 9px;
-    font-size: 13px;
-    font-weight: 600;
-    border: 1px solid #e5e7eb;
-    cursor: pointer;
-    transition: all .15s;
-    white-space: nowrap;
-    text-decoration: none;
-}
-.btn-dp-default {
-    background: #fff;
-    color: #374151;
-}
-.btn-dp-default:hover { background: #f3f4f6; }
-.btn-dp-primary {
-    background: #4f46e5;
-    color: #fff;
-    border-color: #4f46e5;
-}
-.btn-dp-primary:hover { background: #4338ca; border-color: #4338ca; }
-.btn-dp-danger {
-    background: #fff;
-    color: #b91c1c;
-    border-color: #fecaca;
-}
-.btn-dp-danger:hover { background: #fff1f2; }
-
-/* ─── Summary cards ────────────────────────────────────────── */
-.summary-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
-    margin-bottom: 16px;
-}
-@media (max-width: 640px) {
-    .summary-grid { grid-template-columns: 1fr; }
-}
-.summary-card {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    padding: 16px 20px;
-}
-.summary-card .s-label {
-    font-size: 12px;
-    font-weight: 500;
-    color: #9ca3af;
-    margin-bottom: 6px;
-}
-.summary-card .s-value {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: -.02em;
-}
-.s-income  { color: #15803d; }
-.s-expense { color: #b91c1c; }
-.s-balance { color: #111827; }
-.summary-card .s-sub {
-    font-size: 11px;
-    color: #d1d5db;
-    margin-top: 2px;
-}
-
-/* ─── Table card ───────────────────────────────────────────── */
-.table-card {
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    overflow: hidden;
-}
-.table-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 20px;
-    border-bottom: 1px solid #f3f4f6;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-.table-card-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: #111827;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.tx-count-badge {
-    font-size: 11px;
-    font-weight: 600;
-    background: #f3f4f6;
-    color: #6b7280;
-    padding: 3px 10px;
-    border-radius: 20px;
-}
-.header-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-/* ─── Table ────────────────────────────────────────────────── */
-.tx-table-wrap { overflow-x: auto; }
-
-.tx-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 720px;
-}
-.tx-table thead th {
-    padding: 10px 16px;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    color: #9ca3af;
-    background: #f9fafb;
-    border-bottom: 1px solid #f3f4f6;
-    text-align: left;
-    white-space: nowrap;
-}
-.tx-table thead th.th-right { text-align: right; }
-
-.tx-table tbody tr {
-    border-bottom: 1px solid #f9fafb;
-    transition: background .1s;
-}
-.tx-table tbody tr:last-child { border-bottom: none; }
-.tx-table tbody tr:hover { background: #fafafa; }
-
-.tx-table td {
-    padding: 13px 16px;
-    font-size: 13px;
-    vertical-align: middle;
-}
-
-/* ─── Cell: date ───────────────────────────────────────────── */
-.cell-date .date-main {
-    font-weight: 600;
-    color: #111827;
-    white-space: nowrap;
-    font-size: 13px;
-}
-.cell-date .date-day {
-    font-size: 11px;
-    color: #d1d5db;
-    margin-top: 1px;
-}
-
-/* ─── Cell: description ────────────────────────────────────── */
-.cell-desc { max-width: 220px; }
-.desc-main {
-    font-weight: 600;
-    color: #111827;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: block;
-}
-.desc-detail {
-    font-size: 11px;
-    color: #9ca3af;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-top: 2px;
-    display: block;
-}
-
-/* ─── Cell: category ───────────────────────────────────────── */
-.cell-cat { white-space: nowrap; }
-.cat-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 12px;
-    font-weight: 500;
-    color: #6b7280;
-    max-width: 130px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-.cat-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-/* ─── Cell: wallet ─────────────────────────────────────────── */
-.cell-wallet { white-space: nowrap; }
-.wallet-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-size: 12px;
-    color: #6b7280;
-    font-weight: 500;
-    max-width: 180px;
-    overflow: hidden;
-}
-.wallet-arrow {
-    color: #d1d5db;
-    font-size: 11px;
-    flex-shrink: 0;
-}
-
-/* ─── Badge: type ──────────────────────────────────────────── */
-.type-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 20px;
-    white-space: nowrap;
-}
-.badge-income   { background: #f0fdf4; color: #15803d; }
-.badge-expense  { background: #fff1f2; color: #b91c1c; }
-.badge-transfer { background: #eff6ff; color: #2563eb; }
-
-/* ─── Cell: amount ─────────────────────────────────────────── */
-.cell-amount {
-    text-align: right;
-    font-weight: 700;
-    font-size: 13px;
-    white-space: nowrap;
-    letter-spacing: -.01em;
-}
-.amt-income   { color: #15803d; }
-.amt-expense  { color: #b91c1c; }
-.amt-transfer { color: #2563eb; }
-
-/* ─── Cell: actions ────────────────────────────────────────── */
-.cell-actions { text-align: right; white-space: nowrap; }
-.btn-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-    background: #fff;
-    color: #6b7280;
-    cursor: pointer;
-    transition: all .14s;
-    font-size: 13px;
-}
-.btn-icon:hover { background: #f3f4f6; color: #111827; border-color: #d1d5db; }
-.btn-icon-del:hover { background: #fff1f2; color: #b91c1c; border-color: #fecaca; }
-
-/* ─── Pagination ───────────────────────────────────────────── */
-.tx-pagination {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 20px;
-    border-top: 1px solid #f3f4f6;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-.pg-info { font-size: 12px; color: #9ca3af; }
-.pg-btns { display: flex; gap: 4px; }
-.pg-btn {
-    min-width: 30px;
-    height: 30px;
-    padding: 0 8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    background: #fff;
-    color: #6b7280;
-    text-decoration: none;
-    transition: all .14s;
-}
-.pg-btn:hover { background: #f3f4f6; color: #111827; }
-.pg-btn.active { background: #4f46e5; color: #fff; border-color: #4f46e5; }
-.pg-btn.disabled { opacity: .35; pointer-events: none; }
-
-/* ─── Empty state ──────────────────────────────────────────── */
-.empty-state {
-    padding: 48px 20px;
-    text-align: center;
-    color: #9ca3af;
-    font-size: 13px;
-}
-.empty-state i { font-size: 32px; display: block; margin-bottom: 10px; opacity: .4; }
-
-/* ─── Type toggle (modal) ──────────────────────────────────── */
-.type-toggle { display: flex; gap: 6px; }
-.type-btn {
-    flex: 1;
-    padding: 9px 6px;
-    border-radius: 10px;
-    border: 1.5px solid #e5e7eb;
-    text-align: center;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 600;
-    color: #9ca3af;
-    transition: all .15s;
-    user-select: none;
-}
-.type-btn.expense-active  { background: #fff1f2; color: #b91c1c; border-color: #fecaca; }
-.type-btn.income-active   { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
-.type-btn.transfer-active { background: #eff6ff; color: #2563eb; border-color: #bfdbfe; }
-
-#transferSection { display: none; }
-
-.detail-toggle-btn {
-    font-size: 12px;
-    color: #9ca3af;
-    cursor: pointer;
-    border: none;
-    background: none;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    margin-top: 2px;
-}
-.detail-toggle-btn:hover { color: #6366f1; }
-</style>
-@endpush
 
 @section('content')
 
@@ -751,7 +358,7 @@
                         </div>
 
                         {{-- Transfer fields --}}
-                        <div id="transferSection">
+                        <div id="transferSection" style="display:none;">
                             <div class="mb-3">
                                 <label class="form-label" style="font-size:13px;font-weight:500;">Dompet Asal <span class="text-danger">*</span></label>
                                 <select name="wallet_id" id="txFromWallet" class="form-select" style="font-size:13px;border-radius:9px;" disabled>
@@ -769,6 +376,12 @@
                                         <option value="{{ $w->id }}">{{ $w->name }} ({{ $w->formatted_balance }})</option>
                                     @endforeach
                                 </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" style="font-size:13px;font-weight:500;">Biaya Admin <span style="color:#9ca3af;font-size:12px;">(jika ada)</span></label>
+                                <input type="number" name="admin_fee" id="txAdminFee" class="form-control"
+                                       style="font-size:13px;border-radius:9px;" placeholder="0" min="0" disabled>
+                                <div class="form-text" style="font-size:11px;">Biaya admin akan didebet otomatis dari Dompet Asal.</div>
                             </div>
                         </div>
 
@@ -837,12 +450,15 @@
             el.className = 'type-btn' + (t === type ? ' ' + t + '-active' : '');
         });
         var isTransfer = type === 'transfer';
-        document.getElementById('normalSection').style.display   = isTransfer ? 'none' : '';
-        document.getElementById('transferSection').style.display = isTransfer ? '' : 'none';
+        document.getElementById('normalSection').style.display   = isTransfer ? 'none' : 'block';
+        document.getElementById('transferSection').style.display = isTransfer ? 'block' : 'none';
         document.getElementById('txWallet').disabled     = isTransfer;
         document.getElementById('txCategory').disabled   = isTransfer;
         document.getElementById('txFromWallet').disabled = !isTransfer;
         document.getElementById('txToWallet').disabled   = !isTransfer;
+        
+        var adminFeeEl = document.getElementById('txAdminFee');
+        if (adminFeeEl) adminFeeEl.disabled = !isTransfer;
     };
 
     window.updateTypeFromCategory = function () {
@@ -900,6 +516,8 @@
         document.getElementById('txForm').action = '{{ route('transaction.store') }}';
         document.getElementById('txMethodField').innerHTML = '';
         document.getElementById('txDate').value = '{{ now()->format('Y-m-d') }}';
+        var adminFeeEl = document.getElementById('txAdminFee');
+        if (adminFeeEl) adminFeeEl.value = '';
         document.getElementById('detailSection').style.display = 'none';
         document.getElementById('detailChevron').className = 'bi bi-chevron-down';
         selectTxType('expense');

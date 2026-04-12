@@ -42,8 +42,19 @@
 
     <span class="sidebar-section-label">Analitik</span>
     <ul class="sidebar-nav">
-        <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-bar-chart-line-fill"></i><span class="nav-label">Laporan</span></a></li>
-        <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-cloud-upload-fill"></i><span class="nav-label">Impor / OCR</span></a></li>
+        <li class="nav-item">
+            <a href="{{ route('report.index') }}" class="nav-link {{ request()->routeIs('report*') ? 'active' : '' }}">
+                <i class="bi bi-bar-chart-line-fill"></i>
+                <span class="nav-label">Laporan</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('ocr.upload') }}"
+               class="nav-link {{ request()->routeIs('ocr*') ? 'active' : '' }}">
+                <i class="bi bi-file-earmark-image-fill"></i>
+                <span class="nav-label">Impor OCR</span>
+            </a>
+        </li>
         <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-bullseye"></i><span class="nav-label">Target Tabungan</span></a></li>
     </ul>
 
