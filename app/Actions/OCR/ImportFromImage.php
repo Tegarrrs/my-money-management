@@ -39,6 +39,7 @@ class ImportFromImage
         Log::info('[ImportFromImage] OCR done', [
             'text_length' => strlen($rawText),
         ]);
+        Log::debug('[Raw OCR text]:', ['text' => $rawText]);
 
         if (trim($rawText) === '') {
             Log::warning('[ImportFromImage] OCR returned empty text.');

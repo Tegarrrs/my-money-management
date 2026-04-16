@@ -27,10 +27,12 @@ class OCRParser
 
     /** Lines matching these keywords are NOT parsed as items. */
     private const SKIP_PATTERNS = [
-        '/^\\s*[-=*]+\\s*$/',                           // separator lines
-        '/^(no\\s*nota|waktu|order|kasir|jenis|nama)/i', // receipt header fields
-        '/^(transfer|total\\s*bayar)/i',                 // payment footer
-        '/tota[l!1]\s+(bayar|yg|yang)/i',                // ocr typo bypass
+        '/^\s*[-=*]+\s*$/',                           // separator lines
+        '/^(no\s*nota|waktu|order|kasir|jenis|nama|jl\.|kec\.|kab\.|kota|alamat|npwp)/i', // receipt header fields
+        '/^(transfer|tunai|cash|kembali|change|debit|kredit|card|kartu|non\s*tunai|harga\s*jual|\"?mea\s*jual)\b/i',
+        '/total\s*bayar/i',
+        '/tota[l!1]\s+(bayar|yg|yang|belanja)/i',       // ocr typo bypass
+        '/(layanan|konsumen|telp|call|\.co\.id|indomaret\s*co|alfamart)/i', // common footer noise
     ];
 
     /** Lines matching these are treated as summary rows (subtotal / total). */
@@ -194,14 +196,31 @@ class OCRParser
             return null;
         }
 
-        // Detect leading quantity: "2 " or "2x " or "1. " from the name part
-        $qty  = 1;
-        if (preg_match('/^(\d+)\.?\s*[xX]?\s+(.+)$/u', $nameRaw, $qm)) {
-            $candidateQty = (int) $qm[1];
-            // Sanity check: qty should be small (< 100) to avoid mistaking prices
-            if ($candidateQty > 0 && $candidateQty < 100) {
-                $qty     = $candidateQty;
-                $nameRaw = $qm[2];
+        // Check for inline qty and unit price anywhere at the end of the nameRaw
+        // Example: "GLITE BLUE IT FLEXI 1 12700) 12" or "DK KACANG SUKRO 956 1 19900"
+        $qty = 1;
+        if (preg_match('/^(.*?)\s+(\d+)\s+([\d.,]+)[)]?$/u', $nameRaw, $tm)) {
+            $candidateQty = (int) $tm[2];
+            $unitPriceRaw = $this->normaliseAmount($tm[3]);
+            if ($candidateQty > 0 && $candidateQty < 100 && $unitPriceRaw > 100) {
+                // We found a likely inline qty + unit price
+                $qty = $candidateQty;
+                $nameRaw = $tm[1];
+
+                // OCR error recovery: If the extracted total amount is strangely small
+                // but the inline unit price is natural, we override the amount!
+                if ($amount < $unitPriceRaw) {
+                    $amount = $qty * $unitPriceRaw;
+                }
+            }
+        } else {
+            // Original fallback for leading quantity: "2 Ramen"
+            if (preg_match('/^(\d+)\.?\s*[xX]?\s+(.+)$/u', $nameRaw, $qm)) {
+                $candidateQty = (int) $qm[1];
+                if ($candidateQty > 0 && $candidateQty < 100) {
+                    $qty     = $candidateQty;
+                    $nameRaw = $qm[2];
+                }
             }
         }
 
@@ -231,11 +250,13 @@ class OCRParser
     private function extractNameAndAmount(string $line): ?array
     {
         // Many OCR texts have a stray space inside a number: e.g. "132. 300" -> "132.300"
-        // Let's normalize stray spaces before comma or dot:
         $line = preg_replace('/(\d+)[.,]\s+(\d+)/', '$1.$2', $line);
+        // Normalize OCR space within thousands (very common for Tesseract without commas).
+        // For instance "12 710" or "10 900" -> "12.710" or "10.900"
+        $line = preg_replace('/(\d+)\s(\d{3})\b/', '$1.$2', $line);
 
-        // Match text followed by a large number at the end
-        $pattern = '/^(.*?)\s+(?<![.\d,])(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{1,2})?)(?![.\d,])\s*$/u';
+        // Match text followed by a large number at the end, allowing up to 8 chars of noise
+        $pattern = '/^(.*?)\s+(?<![.\d,])(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{1,2})?)(?:\s*[^0-9]{1,8})?$/u';
         if (preg_match($pattern, $line, $m)) {
             $name   = trim($m[1]);
             $amount = $this->normaliseAmount($m[2]);
@@ -243,7 +264,7 @@ class OCRParser
         }
 
         // Fallback: plain integer at end
-        $fallbackPattern = '/^(.*?)\s+(\d+)\s*$/u';
+        $fallbackPattern = '/^(.*?)\s+(\d+)(?:\s*[^0-9]{1,8})?$/u';
         if (preg_match($fallbackPattern, $line, $m)) {
             $name   = trim($m[1]);
             $amount = $this->normaliseAmount($m[2]);
