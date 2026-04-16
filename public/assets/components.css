@@ -9,6 +9,8 @@
     border-radius: 14px;
     padding: 16px 20px;
     margin-bottom: 16px;
+    /* Prevent children from overflowing the card on iOS Safari */
+    overflow: hidden;
 }
 .report-filter .filter-label, .filter-bar-label {
     font-size: 11px;
@@ -30,6 +32,43 @@
     gap: 5px;
     flex: 1;
     min-width: 130px;
+    /* iOS Safari fix: allow flex item to shrink below content size */
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* ─── Filter Actions (buttons) ──────────────────────────────────────── */
+.filter-actions {
+    display: flex;
+    gap: 6px;
+    align-items: flex-end;
+    flex-shrink: 0;
+}
+
+/* ─── Filter Bar — Mobile Responsive ───────────────────────────────── */
+/* 820px covers iPhone 12/13/14 in landscape and most tablets */
+@media (max-width: 820px) {
+    .report-filter .filter-row, .filter-row {
+        gap: 8px;
+    }
+    .report-filter .filter-group, .filter-group {
+        flex: 1 1 calc(50% - 6px);
+        min-width: 0;           /* Critical: Safari won't shrink without this */
+        max-width: calc(50% - 6px);
+    }
+    .filter-actions {
+        flex: 1 1 100%;
+        align-items: center;
+    }
+}
+@media (max-width: 540px) {
+    .report-filter .filter-group, .filter-group {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+    .filter-row {
+        gap: 8px;
+    }
 }
 .report-filter .filter-group label, .filter-group label {
     font-size: 12px;
@@ -45,7 +84,32 @@
     color: #111827;
     outline: none;
     width: 100%;
+    max-width: 100%;             /* Prevent overflow on all browsers */
+    box-sizing: border-box;
     transition: border-color .15s, background .15s;
+}
+/* iOS Safari: date input ignores width without -webkit-appearance reset */
+.filter-group input[type="date"],
+.report-filter .filter-group input[type="date"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 36px;          /* Ensure consistent height on iOS */
+    display: block;            /* Force block layout to respect width */
+    line-height: normal;       /* Prevent text clipping in Safari */
+    position: relative;
+}
+/* Style the empty state placeholder on iOS Safari */
+.filter-group input[type="date"]::before,
+.report-filter .filter-group input[type="date"]::before {
+    color: #9ca3af;
+    content: attr(placeholder);
+}
+.filter-group input[type="date"]:valid::before,
+.report-filter .filter-group input[type="date"]:valid::before {
+    display: none;
 }
 .report-filter .filter-group input:focus, .filter-group input:focus, .filter-group select:focus {
     border-color: #6366f1;

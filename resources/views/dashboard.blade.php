@@ -117,7 +117,10 @@
                     </thead>
                     <tbody>
                         @forelse($recentTransactions as $tx)
-                            @php $isIncome = $tx->amount >= 0; @endphp
+                            @php 
+                                $isTransfer = !is_null($tx->transfer_group_id);
+                                $isIncome = !$isTransfer && $tx->amount >= 0; 
+                            @endphp
                             <tr>
                                 <td class="cell-date">
                                     <div class="date-main">{{ $tx->transaction_date->format('d M Y') }}</div>
@@ -127,7 +130,11 @@
                                     <span class="desc-main" title="{{ $tx->description }}">{{ $tx->description ?? '-' }}</span>
                                 </td>
                                 <td>
-                                    @if($tx->category)
+                                    @if($isTransfer)
+                                        <span class="type-badge badge-transfer" style="font-size:11px;padding:3px 8px;border-radius:6px;background:#f3f4f6;color:#374151;border:none;">
+                                            <i class="bi bi-arrow-left-right"></i> Transfer
+                                        </span>
+                                    @elseif($tx->category)
                                         <span class="cat-pill">
                                             <span class="cat-dot" style="background:{{ $tx->category->type === 'income' ? '#15803d' : '#b91c1c' }}"></span>
                                             {{ $tx->category->name }}
@@ -136,8 +143,12 @@
                                         <span style="color:#e5e7eb;font-size:12px;">—</span>
                                     @endif
                                 </td>
-                                <td class="{{ $isIncome ? 'amt-income' : 'amt-expense' }}">
-                                    {{ $isIncome ? '+' : '−' }} {{ $tx->formatted_amount }}
+                                <td class="{{ $isTransfer ? '' : ($isIncome ? 'amt-income' : 'amt-expense') }}" style="{{ $isTransfer ? 'color:#4b5563;font-weight:600;text-align:right;' : '' }}">
+                                    @if($isTransfer)
+                                        {{ $tx->formatted_amount }}
+                                    @else
+                                        {{ $isIncome ? '+' : '−' }} {{ $tx->formatted_amount }}
+                                    @endif
                                 </td>
                             </tr>
                         @empty

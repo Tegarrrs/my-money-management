@@ -2,7 +2,7 @@
 
 namespace App\Actions\OCR;
 
-use App\DTO\OCR\ParsedItemDTO;
+use App\DTO\OCR\ParsedReceiptDTO;
 use App\Infrastructure\OCR\Contracts\OCRServiceInterface;
 use App\Services\OCRParser;
 use Illuminate\Http\UploadedFile;
@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
  * Use Case: Extract and parse transactions from a receipt image.
  *
  * Flow:
- *   UploadedFile  →  OCRServiceInterface::extractText()  →  OCRParser::parse()  →  ParsedItemDTO[]
+ *   UploadedFile  →  OCRServiceInterface::extractText()  →  OCRParser::parse()  →  ParsedReceiptDTO
  *
  * This class deliberately contains no framework/HTTP knowledge.
  */
@@ -25,9 +25,9 @@ class ImportFromImage
 
     /**
      * @param  UploadedFile  $image
-     * @return ParsedItemDTO[]
+     * @return ParsedReceiptDTO
      */
-    public function handle(UploadedFile $image): array
+    public function handle(UploadedFile $image): ParsedReceiptDTO
     {
         Log::info('[ImportFromImage] Starting OCR extraction', [
             'original_name' => $image->getClientOriginalName(),
@@ -42,13 +42,22 @@ class ImportFromImage
 
         if (trim($rawText) === '') {
             Log::warning('[ImportFromImage] OCR returned empty text.');
-            return [];
+            return new ParsedReceiptDTO(
+                date:          null,
+                items:         [],
+                subtotal:      null,
+                serviceCharge: null,
+                total:         null,
+            );
         }
 
-        $items = $this->parser->parse($rawText);
+        $receipt = $this->parser->parse($rawText);
 
-        Log::info('[ImportFromImage] Parsing complete', ['item_count' => count($items)]);
+        Log::info('[ImportFromImage] Parsing complete', [
+            'item_count'     => count($receipt->items),
+            'date_extracted' => $receipt->date,
+        ]);
 
-        return $items;
+        return $receipt;
     }
 }

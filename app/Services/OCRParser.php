@@ -3,55 +3,133 @@
 namespace App\Services;
 
 use App\DTO\OCR\ParsedItemDTO;
+use App\DTO\OCR\ParsedReceiptDTO;
 
 /**
- * Parses raw OCR-extracted text from a receipt into a list of ParsedItemDTO.
+ * Parses raw OCR-extracted text from a receipt into a ParsedReceiptDTO.
  *
  * Handles common Indonesian receipt patterns:
- *  - "Item Name  15.000"
- *  - "Item Name  15,000"
- *  - Lines containing quantity like "2x Item Name  30.000"
- *  - Total / subtotal / tax lines are skipped
+ *  - "2 Ramen Beef Spicy  86,000"  (qty at start, total at end)
+ *  - "2x Item Name  30.000"
+ *  - "(FREE REFILL)" suffixes are stripped
+ *  - Waktu / date lines like "Waktu : 26 Mar 26 17:34" are detected
+ *  - Subtotal / Biaya Pelayanan / Total lines are parsed separately
  */
 class OCRParser
 {
-    /** Lines matching these keywords are treated as noise and skipped. */
-    private const SKIP_PATTERNS = [
-        '/^(total|subtotal|sub\s*total|pajak|ppn|ppn|tax|service|diskon|discount|kembalian|change|cash|tunai|kartu|card|debit|kredit|retur|struk|bill|receipt|nota|terima\s*kasih|thank)/i',
-        '/^\s*[-=*]+\s*$/', // separator lines
-        '/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/',  // date-only lines
+    // ── Month name → number map (Indonesian & abbreviated English) ───
+    private const MONTH_MAP = [
+        'jan' => '01', 'feb' => '02', 'mar' => '03', 'apr' => '04',
+        'mei' => '05', 'may' => '05', 'jun' => '06', 'jul' => '07',
+        'agu' => '08', 'aug' => '08', 'sep' => '09', 'okt' => '10',
+        'oct' => '10', 'nov' => '11', 'des' => '12', 'dec' => '12',
     ];
 
-    /**
-     * @param  string  $rawText  Raw text extracted by the OCR engine.
-     * @return ParsedItemDTO[]
-     */
-    public function parse(string $rawText): array
+    /** Lines matching these keywords are NOT parsed as items. */
+    private const SKIP_PATTERNS = [
+        '/^\\s*[-=*]+\\s*$/',                           // separator lines
+        '/^(no\\s*nota|waktu|order|kasir|jenis|nama)/i', // receipt header fields
+        '/^(transfer|total\\s*bayar)/i',                 // payment footer
+        '/tota[l!1]\s+(bayar|yg|yang)/i',                // ocr typo bypass
+    ];
+
+    /** Lines matching these are treated as summary rows (subtotal / total). */
+    private const SUMMARY_PATTERNS = [
+        'subtotal'       => '/sub\s*total/i',
+        'total'          => '/^tota[l!1i]\b/i',
+    ];
+
+    // ─────────────────────────────────────────────────────────────────
+
+    public function parse(string $rawText): ParsedReceiptDTO
     {
-        $lines   = preg_split('/\r?\n/', trim($rawText));
-        $results = [];
+        $lines = preg_split('/\r?\n/', trim($rawText));
+
+        $date          = null;
+        $items         = [];
+        $subtotal      = null;
+        $serviceCharge = null;
+        $total         = null;
 
         foreach ($lines as $line) {
             $line = trim($line);
-
             if ($line === '') {
                 continue;
             }
 
+            // 1. Try to extract date from "Waktu" line
+            if ($date === null && preg_match('/waktu\s*[:：]/i', $line)) {
+                $date = $this->extractDate($line);
+                continue;
+            }
+
+            // 2. Skip header / footer noise lines
             if ($this->shouldSkip($line)) {
                 continue;
             }
 
-            $dto = $this->parseLine($line);
+            // 3. Try summary rows (subtotal, service charge, total)
+            $summaryAmount = $this->tryParseSummaryLine($line);
+            if ($summaryAmount !== null) {
+                [$key, $amount] = $summaryAmount;
+                match ($key) {
+                    'subtotal'       => $subtotal      = $amount,
+                    'service_charge' => $serviceCharge = $amount,
+                    'total'          => $total         = $amount,
+                    default          => null,
+                };
+                continue;
+            }
+
+            // 4. Try item line
+            $dto = $this->parseItemLine($line);
             if ($dto !== null) {
-                $results[] = $dto;
+                $items[] = $dto;
             }
         }
 
-        return $results;
+        return new ParsedReceiptDTO(
+            date:          $date,
+            items:         $items,
+            subtotal:      $subtotal,
+            serviceCharge: $serviceCharge,
+            total:         $total,
+        );
     }
 
-    // ──────────────────────────────────────────────────────────────────
+    // ── Date extraction ──────────────────────────────────────────────
+
+    /**
+     * Parse a "Waktu : 26 Mar 26 17:34" style line into "YYYY-MM-DD".
+     * Also handles "26/03/2026", "2026-03-26" etc.
+     */
+    private function extractDate(string $line): ?string
+    {
+        // Strip the key prefix (e.g. "Waktu :")
+        $line = preg_replace('/^[^:：]+[:：]\s*/u', '', $line);
+
+        // Pattern: "26 Mar 26" or "26 Mar 2026"
+        if (preg_match('/(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{2,4})/u', $line, $m)) {
+            $day   = str_pad($m[1], 2, '0', STR_PAD_LEFT);
+            $month = self::MONTH_MAP[strtolower(substr($m[2], 0, 3))] ?? null;
+            $year  = strlen($m[3]) === 2 ? '20' . $m[3] : $m[3];
+            if ($month) {
+                return "{$year}-{$month}-{$day}";
+            }
+        }
+
+        // Pattern: "26/03/2026" or "26-03-2026"
+        if (preg_match('/(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/', $line, $m)) {
+            $day   = str_pad($m[1], 2, '0', STR_PAD_LEFT);
+            $month = str_pad($m[2], 2, '0', STR_PAD_LEFT);
+            $year  = strlen($m[3]) === 2 ? '20' . $m[3] : $m[3];
+            return "{$year}-{$month}-{$day}";
+        }
+
+        return null;
+    }
+
+    // ── Skip rules ───────────────────────────────────────────────────
 
     private function shouldSkip(string $line): bool
     {
@@ -63,43 +141,123 @@ class OCRParser
         return false;
     }
 
+    // ── Summary lines ─────────────────────────────────────────────────
+
     /**
-     * Try to extract (name, amount) from a single text line.
+     * Returns [key, amount] if the line is a summary row, or null otherwise.
      *
-     * Supported amount formats:
-     *   15000  |  15.000  |  15,000  |  Rp15.000  |  Rp 15.000
+     * @return array{0:string,1:int}|null
      */
-    private function parseLine(string $line): ?ParsedItemDTO
+    private function tryParseSummaryLine(string $line): ?array
     {
-        // Strip currency prefix anywhere in the line
+        $extracted = $this->extractNameAndAmount($line);
+        if (!$extracted) {
+            return null;
+        }
+
+        $amount = $extracted[1];
+
+        // Check if the overall line matches a summary pattern
+        foreach (self::SUMMARY_PATTERNS as $key => $pattern) {
+            if (preg_match($pattern, $line)) {
+                return [$key, $amount];
+            }
+        }
+        return null;
+    }
+
+    // ── Item lines ────────────────────────────────────────────────────
+
+    /**
+     * Try to extract a ParsedItemDTO from a receipt item line.
+     *
+     * Supported formats:
+     *   "2 Ramen Beef Spicy  86,000"
+     *   "2x Ramen Beef Spicy  86.000"
+     *   "1 Ocha Tea (FREE REFILL)  9,000"
+     *   "Nasi Goreng  35.000"   ← no qty → qty=1
+     */
+    private function parseItemLine(string $line): ?ParsedItemDTO
+    {
+        // Strip currency prefix
         $line = preg_replace('/\bRp\.?\s*/i', '', $line);
 
-        // Pattern: capture everything before a final standalone number
-        // Amount can be: 15000 | 15.000 | 15,000 | 15.000,00
-        $pattern = '/^(.+?)\s{2,}([\d]{1,3}(?:[.,][\d]{3})*(?:[.,]\d{1,2})?)$/u';
+        $extracted = $this->extractNameAndAmount($line);
+        if (!$extracted) {
+            return null;
+        }
 
-        if (! preg_match($pattern, $line, $m)) {
-            // Fallback: try single-space separator
-            $pattern2 = '/^(.+?)\s+([\d]{1,3}(?:[.,][\d]{3})+)$/u';
-            if (! preg_match($pattern2, $line, $m)) {
+        $nameRaw = $extracted[0];
+        $amount  = $extracted[1];
+
+        if ($amount <= 0) {
+            return null;
+        }
+
+        // Detect leading quantity: "2 " or "2x " or "1. " from the name part
+        $qty  = 1;
+        if (preg_match('/^(\d+)\.?\s*[xX]?\s+(.+)$/u', $nameRaw, $qm)) {
+            $candidateQty = (int) $qm[1];
+            // Sanity check: qty should be small (< 100) to avoid mistaking prices
+            if ($candidateQty > 0 && $candidateQty < 100) {
+                $qty     = $candidateQty;
+                $nameRaw = $qm[2];
+            }
+        }
+
+        $name = $this->cleanName($nameRaw);
+
+        if ($name === '') {
+            return null;
+        }
+
+        // Anti-noise heuristic:
+        // Ignore extremely short names unless they match common short item names
+        if (strlen($name) <= 2) {
+            if (!preg_match('/^(es|te|mi|ro|pb|sc)$/i', $name)) {
                 return null;
             }
         }
 
-        $name      = $this->cleanName(trim($m[1]));
-        $amount    = $this->normaliseAmount($m[2]);
+        return new ParsedItemDTO(name: $name, amount: $amount, qty: $qty);
+    }
 
-        if ($name === '' || $amount <= 0) {
-            return null;
+    // ── Shared helpers ────────────────────────────────────────────────
+
+    /**
+     * Extract and normalise the last standalone number in a line.
+     * Returns an array [$name, $amount] where $name is everything before the amount.
+     */
+    private function extractNameAndAmount(string $line): ?array
+    {
+        // Many OCR texts have a stray space inside a number: e.g. "132. 300" -> "132.300"
+        // Let's normalize stray spaces before comma or dot:
+        $line = preg_replace('/(\d+)[.,]\s+(\d+)/', '$1.$2', $line);
+
+        // Match text followed by a large number at the end
+        $pattern = '/^(.*?)\s+(?<![.\d,])(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{1,2})?)(?![.\d,])\s*$/u';
+        if (preg_match($pattern, $line, $m)) {
+            $name   = trim($m[1]);
+            $amount = $this->normaliseAmount($m[2]);
+            return [$name, $amount];
         }
 
-        return new ParsedItemDTO(name: $name, amount: $amount);
+        // Fallback: plain integer at end
+        $fallbackPattern = '/^(.*?)\s+(\d+)\s*$/u';
+        if (preg_match($fallbackPattern, $line, $m)) {
+            $name   = trim($m[1]);
+            $amount = $this->normaliseAmount($m[2]);
+            return [$name, $amount];
+        }
+
+        return null;
     }
 
     private function cleanName(string $raw): string
     {
-        // Remove leading quantity like "2x " or "2 x "
-        $cleaned = preg_replace('/^\d+\s*[xX]\s*/', '', $raw);
+        // Remove FREE REFILL parenthetical suffixes
+        $cleaned = preg_replace('/\s*\(FREE\s+REFILL\)/i', '', $raw);
+        // Remove other parentheticals that look like notes (optional, conservative)
         // Remove trailing colons or dots
         $cleaned = rtrim(trim($cleaned ?? $raw), ':.');
         return $cleaned;
@@ -107,17 +265,16 @@ class OCRParser
 
     private function normaliseAmount(string $raw): int
     {
-        // Determine decimal separator: if last separator is comma followed by 1-2 digits, it's decimal
+        // "15.000,00" → decimal comma
         if (preg_match('/,\d{1,2}$/', $raw)) {
-            // e.g. "15.000,00" → strip decimal part, then strip dots
             $raw = preg_replace('/,\d+$/', '', $raw);
             $raw = str_replace('.', '', $raw);
+        // "15,000.50" → decimal dot
         } elseif (preg_match('/\.\d{1,2}$/', $raw)) {
-            // e.g. "15,000.50" → strip decimal, strip commas
             $raw = preg_replace('/\.\d+$/', '', $raw);
             $raw = str_replace(',', '', $raw);
         } else {
-            // Plain separators only – treat both as thousands separators
+            // Plain thousands separators only
             $raw = str_replace(['.', ','], '', $raw);
         }
 

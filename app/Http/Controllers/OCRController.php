@@ -19,17 +19,18 @@ use Illuminate\View\View;
 class OCRController extends Controller
 {
     public function __construct(
-        private readonly ImportFromImage  $importFromImage,
+        private readonly ImportFromImage $importFromImage,
         private readonly CreateTransaction $createTransaction,
-    ) {}
+    ) {
+    }
 
     /**
      * Show the OCR import page.
      */
     public function upload(): View
     {
-        $userId     = auth()->id();
-        $wallets    = Wallet::forUser($userId)->orderBy('name')->get();
+        $userId = auth()->id();
+        $wallets = Wallet::forUser($userId)->orderBy('name')->get();
         $categories = Category::forUser($userId)->orderBy('type')->orderBy('name')->get();
 
         return view('pages.ocr.index', compact('wallets', 'categories'));
@@ -41,21 +42,26 @@ class OCRController extends Controller
      */
     public function preview(OCRUploadRequest $request): JsonResponse
     {
-        $items = $this->importFromImage->handle($request->file('image'));
+        $receipt = $this->importFromImage->handle($request->file('image'));
 
-        if (empty($items)) {
+        if (empty($receipt->items)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Tidak ada item yang bisa dibaca dari gambar. Coba gambar dengan tulisan yang lebih jelas.',
-                'items'   => [],
-                'count'   => 0,
+                'items' => [],
+                'count' => 0,
+                'date' => null,
             ], 422);
         }
 
         return response()->json([
             'success' => true,
-            'count'   => count($items),
-            'items'   => array_map(fn ($dto) => $dto->toArray(), $items),
+            'count' => count($receipt->items),
+            'items' => array_map(fn($dto) => $dto->toArray(), $receipt->items),
+            'date' => $receipt->date,
+            'subtotal' => $receipt->subtotal,
+            'service_charge' => $receipt->serviceCharge,
+            'total' => $receipt->total,
         ]);
     }
 
@@ -67,22 +73,22 @@ class OCRController extends Controller
         $userId = auth()->id();
 
         $request->validate([
-            'wallet_id'   => ['required', 'integer', 'exists:wallets,id'],
+            'wallet_id' => ['required', 'integer', 'exists:wallets,id'],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
-            'type'        => ['required', 'in:income,expense'],
-            'date'        => ['required', 'date'],
-            'items'       => ['required', 'json'],
+            'type' => ['required', 'in:income,expense'],
+            'date' => ['required', 'date'],
+            'items' => ['required', 'json'],
         ]);
 
         $wallet = Wallet::findOrFail($request->input('wallet_id'));
         abort_unless($wallet->user_id === $userId, 403);
 
-        $user       = auth()->user();
-        $rawItems   = json_decode($request->input('items'), true);
+        $user = auth()->user();
+        $rawItems = json_decode($request->input('items'), true);
         $savedCount = 0;
 
         foreach ($rawItems as $item) {
-            $name   = trim($item['name'] ?? '');
+            $name = trim($item['name'] ?? '');
             $amount = (int) ($item['amount'] ?? 0);
 
             if ($name === '' || $amount <= 0) {
@@ -90,11 +96,11 @@ class OCRController extends Controller
             }
 
             $this->createTransaction->execute($user, [
-                'wallet_id'        => $wallet->id,
-                'category_id'      => $request->input('category_id') ?: null,
-                'type'             => $request->input('type'),
-                'description'      => $name,
-                'amount'           => $amount,
+                'wallet_id' => $wallet->id,
+                'category_id' => $request->input('category_id') ?: null,
+                'type' => $request->input('type'),
+                'description' => $name,
+                'amount' => $amount,
                 'transaction_date' => $request->input('date'),
             ]);
 

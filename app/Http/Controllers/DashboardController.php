@@ -24,6 +24,10 @@ class DashboardController extends Controller
 
         $recentTransactions = Transaction::with(['category', 'wallet'])
             ->forUser($userId)
+            ->where(function ($q) {
+                $q->whereNull('transfer_group_id')
+                  ->orWhere('amount', '<', 0); // only show debit leg of transfers
+            })
             ->recent(5)
             ->get();
 

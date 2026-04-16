@@ -141,7 +141,8 @@
                         <input type="checkbox" class="form-check-input" id="ocrCheckAll" checked onchange="ocrToggleAll(this)">
                     </th>
                     <th>Nama Item</th>
-                    <th class="text-end" style="width:180px;">Jumlah (Rp)</th>
+                    <th class="text-center" style="width:70px;">Qty</th>
+                    <th class="text-end" style="width:160px;">Jumlah (Rp)</th>
                     <th style="width:48px;"></th>
                 </tr>
             </thead>
@@ -459,6 +460,7 @@
     // ── State ───────────────────────────────────────────────────────
     let ocrItems   = [];   // ParsedItemDTO[] from server
     let rowIdSeq   = 0;    // auto-increment row id
+    let ocrDate    = null; // ISO date string extracted from receipt
 
     // ── Step navigation ─────────────────────────────────────────────
     function ocrSetStep(n) {
@@ -568,6 +570,14 @@
             }
 
             ocrItems = data.items;
+            ocrDate  = data.date || null;
+
+            // Auto-fill date from receipt if available
+            if (ocrDate) {
+                const dateEl = document.getElementById('ocrDate');
+                if (dateEl) dateEl.value = ocrDate;
+            }
+
             renderOCRTable(ocrItems);
             ocrSetStep(2);
 
@@ -601,11 +611,11 @@
             return;
         }
 
-        items.forEach(item => addRow(item.name, item.amount));
+        items.forEach(item => addRow(item.name, item.amount, item.qty ?? 1));
         updateOCRSummary();
     }
 
-    function addRow(name = '', amount = 0) {
+    function addRow(name = '', amount = 0, qty = 1) {
         const id  = ++rowIdSeq;
         const tr  = document.createElement('tr');
         tr.id     = 'ocrRow' + id;
@@ -622,6 +632,15 @@
                     placeholder="Nama item…"
                     oninput="updateOCRSummary()"
                     data-field="name" data-id="${id}">
+            </td>
+            <td>
+                <input type="number"
+                    class="ocr-cell-edit text-center"
+                    value="${qty}"
+                    min="1"
+                    placeholder="1"
+                    style="width:56px;"
+                    data-field="qty" data-id="${id}">
             </td>
             <td>
                 <input type="number"
@@ -702,7 +721,8 @@
             if (!row) return;
             const name   = row.querySelector('[data-field="name"]')?.value?.trim() ?? '';
             const amount = parseInt(row.querySelector('[data-field="amount"]')?.value || 0, 10);
-            if (name && amount > 0) results.push({ name, amount });
+            const qty    = parseInt(row.querySelector('[data-field="qty"]')?.value   || 1, 10);
+            if (name && amount > 0) results.push({ name, amount, qty });
         });
         return results;
     }

@@ -63,7 +63,7 @@
                     <option value="transfer"  {{ request('type') === 'transfer' ? 'selected' : '' }}>Transfer</option>
                 </select>
             </div>
-            <div style="display:flex;gap:6px;align-items:flex-end;flex-shrink:0;">
+            <div class="filter-actions">
                 <button type="submit" class="btn-dp btn-dp-primary">
                     <i class="bi bi-funnel-fill"></i> Filter
                 </button>
@@ -74,8 +74,8 @@
 
     {{-- ── Summary Cards ───────────────────────────────────────────── --}}
     @php
-        $totalIncome   = $transactions->getCollection()->where('amount', '>', 0)->sum('amount');
-        $totalExpense  = abs($transactions->getCollection()->where('amount', '<', 0)->sum('amount'));
+        $totalIncome   = $transactions->getCollection()->whereNull('transfer_group_id')->where('amount', '>', 0)->sum('amount');
+        $totalExpense  = abs($transactions->getCollection()->whereNull('transfer_group_id')->where('amount', '<', 0)->sum('amount'));
         $totalBalance  = $totalIncome - $totalExpense;
     @endphp
     <div class="summary-grid">

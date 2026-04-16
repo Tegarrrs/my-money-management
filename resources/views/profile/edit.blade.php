@@ -1,29 +1,48 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Profile') }}
-        </h2>
-    </x-slot>
+@extends('layouts.main')
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
-            <div class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
-                <div class="max-w-xl">
-                    @include('profile.partials.update-profile-information-form')
+@section('title', 'Profil Saya')
+@section('subtitle', 'Atur informasi akun dan pengaturan keamanan')
+
+@section('content')
+<div class="row g-4">
+    <div class="col-12 col-xl-6">
+        <div class="rp-card">
+            <div class="rp-card-header">
+                <div>
+                    <div class="rp-card-title">Informasi Profil</div>
+                    <div class="rp-card-sub" style="margin-top:2px;">Perbarui informasi profil akun dan alamat email Anda.</div>
                 </div>
             </div>
-
-            <div class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
-                <div class="max-w-xl">
-                    @include('profile.partials.update-password-form')
-                </div>
-            </div>
-
-            <div class="p-4 sm:p-8 bg-white dark:bg-gray-800 shadow sm:rounded-lg">
-                <div class="max-w-xl">
-                    @include('profile.partials.delete-user-form')
-                </div>
+            <div class="rp-card-body">
+                @include('profile.partials.update-profile-information-form')
             </div>
         </div>
     </div>
-</x-app-layout>
+    
+    <div class="col-12 col-xl-6">
+        <div class="rp-card">
+            <div class="rp-card-header">
+                <div>
+                    <div class="rp-card-title">Ubah Password</div>
+                    <div class="rp-card-sub" style="margin-top:2px;">Pastikan akun Anda menggunakan password panjang dan acak agar tetap aman.</div>
+                </div>
+            </div>
+            <div class="rp-card-body">
+                @include('profile.partials.update-password-form')
+            </div>
+        </div>
+        
+        <div class="rp-card mt-4" style="border-color:#fecaca;">
+            <div class="rp-card-header" style="background:#fff1f2;border-bottom-color:#fecaca;">
+                <div>
+                    <div class="rp-card-title" style="color:#b91c1c;">Hapus Akun</div>
+                    <div class="rp-card-sub" style="color:#ef4444;margin-top:2px;">Hapus akun secara permanen beserta semua datanya.</div>
+                </div>
+            </div>
+            <div class="rp-card-body">
+                @include('profile.partials.delete-user-form')
+            </div>
+        </div>
+    </div>
+</div>
+@endsection

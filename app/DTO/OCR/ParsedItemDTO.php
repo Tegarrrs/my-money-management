@@ -10,6 +10,7 @@ final class ParsedItemDTO
     public function __construct(
         public readonly string $name,
         public readonly int    $amount,
+        public readonly int    $qty = 1,
     ) {}
 
     public function toArray(): array
@@ -17,6 +18,7 @@ final class ParsedItemDTO
         return [
             'name'   => $this->name,
             'amount' => $this->amount,
+            'qty'    => $this->qty,
         ];
     }
 
@@ -25,6 +27,7 @@ final class ParsedItemDTO
         return new self(
             name:   trim($data['name'] ?? ''),
             amount: (int) ($data['amount'] ?? 0),
+            qty:    (int) ($data['qty']    ?? 1),
         );
     }
 }

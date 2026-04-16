@@ -55,7 +55,7 @@
             display: flex;
             align-items: stretch;
             min-height: 100vh;
-            overflow: hidden;
+            overflow-x: hidden;
         }
 
         .auth-shell {
@@ -297,6 +297,41 @@
             padding: 48px 40px;
             position: relative;
             overflow-y: auto;
+        }
+
+        /* ── Mobile Branding (shown only on mobile) ──────────────── */
+        .mobile-brand {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 28px;
+            text-decoration: none;
+        }
+
+        .mobile-brand .brand-icon {
+            width: 34px;
+            height: 34px;
+            background: var(--color-accent);
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mobile-brand .brand-icon i {
+            color: #fff;
+            font-size: 16px;
+        }
+
+        .mobile-brand .brand-name {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--color-ink);
+            letter-spacing: -.3px;
+        }
+
+        .mobile-brand .brand-name span {
+            color: var(--color-accent);
         }
 
         .auth-right::before {
@@ -705,13 +740,44 @@
             .auth-right {
                 width: 100%;
                 min-width: unset;
-                padding: 40px 24px;
+                padding: 48px 32px;
+                justify-content: flex-start;
+                padding-top: 48px;
+            }
+
+            .mobile-brand {
+                display: flex;
+            }
+
+            .auth-form-wrap {
+                width: 100%;
+                max-width: 480px;
             }
         }
 
-        @media (max-width: 480px) {
+        @media (max-width: 540px) {
             .auth-right {
-                padding: 32px 20px;
+                padding: 36px 20px;
+            }
+
+            .auth-form-wrap {
+                max-width: 100%;
+            }
+
+            .form-head h2 {
+                font-size: 22px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .auth-right {
+                padding: 28px 16px;
+            }
+
+            .form-options {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
             }
         }
     </style>
@@ -795,6 +861,10 @@
 
         <!-- RIGHT PANEL -->
         <div class="auth-right">
+            <a href="#" class="mobile-brand">
+                <div class="brand-icon"><i class="bi bi-wallet-fill"></i></div>
+                <span class="brand-name">Dom<span>petra</span></span>
+            </a>
             {{ $slot }}
         </div>
 
