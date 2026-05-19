@@ -55,12 +55,6 @@
                 <span class="nav-label">Impor OCR</span>
             </a>
         </li>
-        <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-bullseye"></i><span class="nav-label">Target Tabungan</span></a></li>
-    </ul>
-
-    <span class="sidebar-section-label">Pengaturan</span>
-    <ul class="sidebar-nav">
-        <li class="nav-item"><a href="#" class="nav-link"><i class="bi bi-gear-fill"></i><span class="nav-label">Pengaturan</span></a></li>
     </ul>
 
     <div class="sidebar-footer">

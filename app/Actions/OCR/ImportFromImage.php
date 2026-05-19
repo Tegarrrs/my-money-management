@@ -2,25 +2,23 @@
 
 namespace App\Actions\OCR;
 
+use App\Contracts\ReceiptScannerInterface;
 use App\DTO\OCR\ParsedReceiptDTO;
-use App\Infrastructure\OCR\Contracts\OCRServiceInterface;
-use App\Services\OCRParser;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Use Case: Extract and parse transactions from a receipt image.
+ * Use Case: Extract and parse transactions from a receipt image using an AI vision model.
  *
  * Flow:
- *   UploadedFile  →  OCRServiceInterface::extractText()  →  OCRParser::parse()  →  ParsedReceiptDTO
+ *   UploadedFile  →  ReceiptScannerInterface::scan()  →  ParsedReceiptDTO
  *
  * This class deliberately contains no framework/HTTP knowledge.
  */
 class ImportFromImage
 {
     public function __construct(
-        private readonly OCRServiceInterface $ocr,
-        private readonly OCRParser           $parser,
+        private readonly ReceiptScannerInterface $scanner,
     ) {}
 
     /**
@@ -29,20 +27,25 @@ class ImportFromImage
      */
     public function handle(UploadedFile $image): ParsedReceiptDTO
     {
-        Log::info('[ImportFromImage] Starting OCR extraction', [
+        Log::info('[ImportFromImage] Starting receipt scanning', [
             'original_name' => $image->getClientOriginalName(),
             'size_bytes'    => $image->getSize(),
         ]);
 
-        $rawText = $this->ocr->extractText($image);
+        try {
+            $receipt = $this->scanner->scan($image);
+            
+            Log::info('[ImportFromImage] Parsing complete', [
+                'item_count'     => count($receipt->items),
+                'date_extracted' => $receipt->date,
+                'total'          => $receipt->total,
+            ]);
 
-        Log::info('[ImportFromImage] OCR done', [
-            'text_length' => strlen($rawText),
-        ]);
-        Log::debug('[Raw OCR text]:', ['text' => $rawText]);
-
-        if (trim($rawText) === '') {
-            Log::warning('[ImportFromImage] OCR returned empty text.');
+            return $receipt;
+        } catch (\Exception $e) {
+            Log::error('[ImportFromImage] Scanning failed: ' . $e->getMessage());
+            
+            // Return empty DTO on failure so frontend doesn't crash
             return new ParsedReceiptDTO(
                 date:          null,
                 items:         [],
@@ -51,14 +54,5 @@ class ImportFromImage
                 total:         null,
             );
         }
-
-        $receipt = $this->parser->parse($rawText);
-
-        Log::info('[ImportFromImage] Parsing complete', [
-            'item_count'     => count($receipt->items),
-            'date_extracted' => $receipt->date,
-        ]);
-
-        return $receipt;
     }
 }

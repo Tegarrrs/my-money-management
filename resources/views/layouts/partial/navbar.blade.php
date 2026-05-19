@@ -9,21 +9,7 @@
         <small id="navbar-subtitle">@yield('subtitle', 'Selamat datang kembali, ' . explode(' ', auth()->user()->name)[0] . ' 👋')</small>
     </h1>
 
-    <div class="dropdown">
-        <div class="navbar-date-range dropdown-toggle" data-bs-toggle="dropdown">
-            <i class="bi bi-calendar3"></i>
-            <span id="dateRangeLabel">{{ now()->translatedFormat('F Y') }}</span>
-            <i class="bi bi-chevron-down" style="font-size:10px;color:var(--color-muted)"></i>
-        </div>
-        <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" href="#" onclick="setDateRange('Bulan Ini');return false;">Bulan Ini</a></li>
-            <li><a class="dropdown-item" href="#" onclick="setDateRange('Bulan Lalu');return false;">Bulan Lalu</a></li>
-            <li><a class="dropdown-item" href="#" onclick="setDateRange('3 Bulan Terakhir');return false;">3 Bulan Terakhir</a></li>
-            <li><a class="dropdown-item" href="#" onclick="setDateRange('Tahun Ini');return false;">Tahun Ini</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item" href="#" onclick="return false;"><i class="bi bi-calendar-range me-1"></i>Rentang Kustom…</a></li>
-        </ul>
-    </div>
+
 
     <div class="navbar-icon-btn"><i class="bi bi-bell"></i><span class="notif-dot"></span></div>
 
@@ -43,7 +29,7 @@
             </li>
             <li><hr class="dropdown-divider"></li>
             <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="bi bi-person me-2"></i>Profil Saya</a></li>
-            <li><a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Pengaturan</a></li>
+
             <li><hr class="dropdown-divider"></li>
             <li>
                 <form method="POST" action="{{ route('logout') }}">

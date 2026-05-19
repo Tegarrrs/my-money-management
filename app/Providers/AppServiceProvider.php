@@ -13,8 +13,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // Bind OCR engine: swap TesseractOCRService for any cloud driver here
-        $this->app->bind(OCRServiceInterface::class, TesseractOCRService::class);
+        // Bind the receipt scanner to the Gemini AI implementation
+        $this->app->bind(
+            \App\Contracts\ReceiptScannerInterface::class,
+            \App\Infrastructure\OCR\GeminiReceiptScanner::class
+        );
     }
 
     /**

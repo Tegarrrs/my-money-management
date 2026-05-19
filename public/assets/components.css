@@ -133,8 +133,8 @@
 }
 .btn-rp-default, .btn-dp-default { background: #fff; color: #374151; }
 .btn-rp-default:hover, .btn-dp-default:hover { background: #f3f4f6; }
-.btn-rp-primary, .btn-dp-primary { background: #4f46e5; color: #fff; border-color: #4f46e5; }
-.btn-rp-primary:hover, .btn-dp-primary:hover { background: #4338ca; border-color: #4338ca; }
+.btn-rp-primary, .btn-dp-primary { background: #1d6a4a; color: #fff; border-color: #1d6a4a; }
+.btn-rp-primary:hover, .btn-dp-primary:hover { background: #166534; border-color: #166534; }
 .btn-dp-danger { background: #fff; color: #b91c1c; border-color: #fecaca; }
 .btn-dp-danger:hover { background: #fff1f2; }
 
@@ -174,8 +174,8 @@
 .s-card.wallet::before { background: #0891b2; }
 .s-card.income::before { background: #15803d; }
 .s-card.expense::before { background: #b91c1c; }
-.s-card.balance::before { background: #4f46e5; }
-.s-card.balance-neg::before { background: #d97706; }
+.s-card.balance::before { background: #1d6a4a; }
+.s-card.balance-neg::before { background: #b91c1c; }
 
 .s-card .s-icon {
     width: 36px;
@@ -190,8 +190,8 @@
 .s-card.wallet .s-icon { background: #ecfeff; color: #0891b2; }
 .s-card.income .s-icon { background: #f0fdf4; color: #15803d; }
 .s-card.expense .s-icon { background: #fff1f2; color: #b91c1c; }
-.s-card.balance .s-icon,
-.s-card.balance-neg .s-icon { background: #eff6ff; color: #4f46e5; }
+.s-card.balance .s-icon { background: #ecfdf5; color: #1d6a4a; }
+.s-card.balance-neg .s-icon { background: #fff1f2; color: #b91c1c; }
 
 .s-card .s-label {
     font-size: 11px;
@@ -210,8 +210,8 @@
 .s-card.wallet .s-value { color: #0891b2; }
 .s-card.income .s-value { color: #15803d; }
 .s-card.expense .s-value { color: #b91c1c; }
-.s-card.balance .s-value { color: #4f46e5; }
-.s-card.balance-neg .s-value { color: #d97706; }
+.s-card.balance .s-value { color: #1d6a4a; }
+.s-card.balance-neg .s-value { color: #b91c1c; }
 
 .s-card .s-sub {
     font-size: 11px;
@@ -432,7 +432,7 @@
     transition: all .14s;
 }
 .pg-btn:hover { background: #f3f4f6; color: #111827; }
-.pg-btn.active { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+.pg-btn.active { background: #1d6a4a; color: #fff; border-color: #1d6a4a; }
 .pg-btn.disabled { opacity: .35; pointer-events: none; }
 
 /* ─── Percent bar ──────────────────────────────────────────────────── */
@@ -496,5 +496,5 @@
 .legend-dot.expense { background: #b91c1c; }
 .section-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 16px; }
 .section-header .section-title { font-size: 16px; font-weight: 700; margin: 0; color: #111827; }
-.section-header .section-link { font-size: 13px; font-weight: 600; color: #4f46e5; text-decoration: none; }
+.section-header .section-link { font-size: 13px; font-weight: 600; color: #1d6a4a; text-decoration: none; }
 .section-header .section-link:hover { text-decoration: underline; }

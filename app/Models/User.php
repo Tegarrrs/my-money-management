@@ -70,4 +70,20 @@ class User extends Authenticatable
     {
         return $this->hasMany(CategorySuggestion::class);
     }
+
+    protected static function booted()
+    {
+        static::created(function (User $user) {
+            $categories = [
+                ['name' => 'Makanan & Minuman', 'type' => 'expense', 'icon' => 'bi-cup-hot', 'color' => '#f97316'],
+                ['name' => 'Transportasi', 'type' => 'expense', 'icon' => 'bi-car-front', 'color' => '#3b82f6'],
+                ['name' => 'Belanja', 'type' => 'expense', 'icon' => 'bi-bag', 'color' => '#ec4899'],
+                ['name' => 'Gaji', 'type' => 'income', 'icon' => 'bi-cash-stack', 'color' => '#22c55e'],
+                ['name' => 'Lain-lain', 'type' => 'expense', 'icon' => 'bi-three-dots', 'color' => '#6b7280'],
+            ];
+            foreach ($categories as $cat) {
+                $user->categories()->create($cat);
+            }
+        });
+    }
 }

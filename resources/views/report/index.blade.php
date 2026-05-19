@@ -47,7 +47,3 @@
     @include('report.components.trend', ['trend' => $report['trend']])
 
 @endsection
-
-@push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-@endpush

@@ -30,7 +30,7 @@ class ReportService
         foreach ($breakdownData as $item) {
             $total = (float) $item->total;
             $percentage = $totalExpense > 0 ? round(($total / $totalExpense) * 100, 2) : 0;
-            $categoryName = $item->category ? $item->category->name : 'Unknown';
+            $categoryName = $item->category ? $item->category->name : 'Tanpa Kategori';
             
             $categoryBreakdownDTOs[] = new CategoryBreakdownDTO(
                 category: $categoryName,

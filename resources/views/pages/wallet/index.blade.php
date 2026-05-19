@@ -105,9 +105,18 @@
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Ikon (Bootstrap Icons)</label>
-                            <input type="text" name="icon" id="wIcon" class="form-control"
-                                   placeholder="cth. bi-wallet2">
+                            <label class="form-label">Ikon Dompet</label>
+                            <input type="hidden" name="icon" id="wIcon" value="bi-wallet2">
+                            <div class="d-flex flex-wrap gap-2" id="iconPickerGrid">
+                                @php
+                                    $icons = ['bi-wallet2', 'bi-bank', 'bi-cash-stack', 'bi-credit-card', 'bi-piggy-bank', 'bi-safe', 'bi-briefcase', 'bi-phone', 'bi-house', 'bi-basket'];
+                                @endphp
+                                @foreach($icons as $ic)
+                                    <button type="button" class="btn btn-outline-secondary icon-btn" data-icon="{{ $ic }}" style="font-size: 1.25rem; width: 44px; height: 44px; padding: 0;">
+                                        <i class="bi {{ $ic }}"></i>
+                                    </button>
+                                @endforeach
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label" id="wBalanceLabel">Saldo Awal (Rp)</label>
@@ -143,11 +152,21 @@ function editWallet(id, name, type, icon, color, allowNeg, balance) {
     document.getElementById('walletModalTitle').textContent = 'Edit Dompet';
     document.getElementById('wName').value    = name;
     document.getElementById('wType').value    = type;
-    document.getElementById('wIcon').value    = icon || '';
+    document.getElementById('wIcon').value    = icon || 'bi-wallet2';
     document.getElementById('wAllowNeg').checked = allowNeg;
     document.getElementById('wBalance').value = balance ?? 0;
     document.getElementById('wBalanceLabel').textContent = 'Koreksi Saldo (Rp)';
     document.getElementById('wBalanceHint').textContent  = 'Ubah hanya jika perlu koreksi saldo manual.';
+
+    // Update Visual Icon Picker
+    document.querySelectorAll('.icon-btn').forEach(b => {
+        b.classList.remove('btn-primary', 'text-white');
+        b.classList.add('btn-outline-secondary');
+        if (b.dataset.icon === (icon || 'bi-wallet2')) {
+            b.classList.remove('btn-outline-secondary');
+            b.classList.add('btn-primary', 'text-white');
+        }
+    });
 
     const form = document.getElementById('walletForm');
     form.action = '/wallet/' + id;
@@ -164,6 +183,39 @@ document.getElementById('walletModal').addEventListener('hidden.bs.modal', funct
     document.getElementById('walletForm').action = '{{ route('wallet.store') }}';
     document.getElementById('walletMethodField').innerHTML = '';
     document.getElementById('walletModalTitle').textContent = 'Tambah Dompet';
+    document.getElementById('wIcon').value = 'bi-wallet2';
+    
+    // Reset Visual Icon Picker
+    document.querySelectorAll('.icon-btn').forEach(b => {
+        b.classList.remove('btn-primary', 'text-white');
+        b.classList.add('btn-outline-secondary');
+        if (b.dataset.icon === 'bi-wallet2') {
+            b.classList.remove('btn-outline-secondary');
+            b.classList.add('btn-primary', 'text-white');
+        }
+    });
 });
+
+// Icon Picker Click Event
+document.addEventListener('DOMContentLoaded', function() {
+    // Initial state
+    document.querySelectorAll('.icon-btn').forEach(b => {
+        if (b.dataset.icon === 'bi-wallet2') {
+            b.classList.remove('btn-outline-secondary');
+            b.classList.add('btn-primary', 'text-white');
+        }
+    });
+
+    document.querySelectorAll('.icon-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.icon-btn').forEach(b => {
+                b.classList.remove('btn-primary', 'text-white');
+                b.classList.add('btn-outline-secondary');
+            });
+            this.classList.remove('btn-outline-secondary');
+            this.classList.add('btn-primary', 'text-white');
+            document.getElementById('wIcon').value = this.dataset.icon;
+        });
+    });
 </script>
 @endpush
