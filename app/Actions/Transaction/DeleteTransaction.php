@@ -11,13 +11,32 @@ class DeleteTransaction
     public function execute(Transaction $transaction): void
     {
         DB::transaction(function () use ($transaction) {
-            /** @var Wallet $wallet */
-            $wallet = Wallet::findOrFail($transaction->wallet_id);
-
-            // Reverse the amount effect on the wallet
-            $wallet->increment('balance', -(float) $transaction->amount);
-
-            $transaction->delete();
+            if ($transaction->transfer_group_id) {
+                // Find all legs of this transfer
+                $legs = Transaction::where('transfer_group_id', $transaction->transfer_group_id)->get();
+                foreach ($legs as $leg) {
+                    $wallet = Wallet::find($leg->wallet_id);
+                    if ($wallet) {
+                        $wallet->increment('balance', -(float) $leg->amount);
+                    }
+                    $leg->delete();
+                }
+            } elseif ($transaction->split_group_id) {
+                // Find all parts of this split
+                $parts = Transaction::where('split_group_id', $transaction->split_group_id)->get();
+                foreach ($parts as $part) {
+                    $wallet = Wallet::find($part->wallet_id);
+                    if ($wallet) {
+                        $wallet->increment('balance', -(float) $part->amount);
+                    }
+                    $part->delete();
+                }
+            } else {
+                /** @var Wallet $wallet */
+                $wallet = Wallet::findOrFail($transaction->wallet_id);
+                $wallet->increment('balance', -(float) $transaction->amount);
+                $transaction->delete();
+            }
         });
     }
 }

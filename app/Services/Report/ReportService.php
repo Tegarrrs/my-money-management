@@ -49,10 +49,13 @@ class ReportService
             );
         }
 
+        $detailedTransactions = $this->reportQuery->getDetailedTransactions($start, $end, $userId);
+
         return new ReportResultDTO(
             summary: $summaryDTO,
             categoryBreakdown: $categoryBreakdownDTOs,
-            trend: $trendDTOs
+            trend: $trendDTOs,
+            transactions: $detailedTransactions,
         );
     }
 }

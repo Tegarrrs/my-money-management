@@ -65,4 +65,20 @@ class ReportQuery
             ->orderByRaw('DATE(transaction_date)')
             ->get();
     }
+
+    public function getDetailedTransactions(string $start, string $end, ?int $userId = null): \Illuminate\Support\Collection
+    {
+        $userId = $userId ?? auth()->id();
+
+        return Transaction::with(['category', 'wallet'])
+            ->where('user_id', $userId)
+            ->whereBetween('transaction_date', [$start, $end])
+            ->where(function ($q) {
+                $q->whereNull('transfer_group_id')
+                  ->orWhere('amount', '<', 0); // only debit leg of transfers
+            })
+            ->orderByDesc('transaction_date')
+            ->orderByDesc('id')
+            ->get();
+    }
 }

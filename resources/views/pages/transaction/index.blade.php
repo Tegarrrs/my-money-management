@@ -3,14 +3,18 @@
 @section('title', 'Transaksi')
 @section('subtitle', 'Kelola semua transaksi keuanganmu')
 
-
-
 @section('content')
 
     {{-- Flash messages --}}
     @if(session('success'))
         <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
             <i class="bi bi-check-circle-fill me-2"></i>{{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+            <i class="bi bi-exclamation-circle-fill me-2"></i>{{ session('error') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
@@ -72,44 +76,19 @@
         </div>
     </form>
 
-    {{-- ── Summary Cards ───────────────────────────────────────────── --}}
-    @php
-        $totalIncome   = $transactions->getCollection()->whereNull('transfer_group_id')->where('amount', '>', 0)->sum('amount');
-        $totalExpense  = abs($transactions->getCollection()->whereNull('transfer_group_id')->where('amount', '<', 0)->sum('amount'));
-        $totalBalance  = $totalIncome - $totalExpense;
-    @endphp
-    <div class="summary-grid">
-        <div class="summary-card">
-            <div class="s-label">Pemasukan</div>
-            <div class="s-value s-income">Rp {{ number_format($totalIncome, 0, ',', '.') }}</div>
-            <div class="s-sub">periode ini</div>
-        </div>
-        <div class="summary-card">
-            <div class="s-label">Pengeluaran</div>
-            <div class="s-value s-expense">Rp {{ number_format($totalExpense, 0, ',', '.') }}</div>
-            <div class="s-sub">periode ini</div>
-        </div>
-        <div class="summary-card">
-            <div class="s-label">Selisih</div>
-            <div class="s-value s-balance" style="color:{{ $totalBalance >= 0 ? '#15803d' : '#b91c1c' }}">
-                {{ $totalBalance >= 0 ? '' : '-' }}Rp {{ number_format(abs($totalBalance), 0, ',', '.') }}
-            </div>
-            <div class="s-sub">pemasukan - pengeluaran</div>
-        </div>
-    </div>
-
     {{-- ── Table Card ───────────────────────────────────────────────── --}}
     <div class="table-card">
         <div class="table-card-header">
             <div class="table-card-title">
                 Semua Transaksi
                 <span class="tx-count-badge">{{ $transactions->total() }}</span>
+                <span class="text-muted ms-2" style="font-size:11px;font-weight:normal;">Tekan <kbd>N</kbd> baru, <kbd>/</kbd> cari</span>
             </div>
             <div class="header-right">
                 <a href="{{ route('import.show') }}" class="btn-dp btn-dp-default">
                     <i class="bi bi-clipboard-pulse"></i> Import
                 </a>
-                <button class="btn-dp btn-dp-default">
+                <button type="button" class="btn-dp btn-dp-default" onclick="triggerExport()">
                     <i class="bi bi-download"></i> Ekspor
                 </button>
                 <button class="btn-dp btn-dp-primary" data-bs-toggle="modal" data-bs-target="#txModal" onclick="openCreate()">
@@ -118,188 +97,23 @@
             </div>
         </div>
 
-        <div class="tx-table-wrap">
-            <table class="tx-table">
-                <thead>
-                    <tr>
-                        <th style="width:120px;">Tanggal</th>
-                        <th style="width:220px;">Deskripsi</th>
-                        <th style="width:140px;">Kategori</th>
-                        <th style="width:170px;">Dompet</th>
-                        <th style="width:110px;">Jenis</th>
-                        <th class="th-right" style="width:140px;">Jumlah</th>
-                        <th class="th-right" style="width:90px;">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($transactions as $tx)
-                        @php
-                            $isTransfer = !is_null($tx->transfer_group_id);
-                            $isIncome   = !$isTransfer && $tx->amount >= 0;
-                        @endphp
-                        <tr>
-                            {{-- Tanggal --}}
-                            <td class="cell-date">
-                                <div class="date-main">{{ $tx->transaction_date->format('d M Y') }}</div>
-                                <div class="date-day">{{ $tx->transaction_date->translatedFormat('l') }}</div>
-                            </td>
-
-                            {{-- Deskripsi --}}
-                            <td class="cell-desc">
-                                <span class="desc-main" title="{{ $tx->description }}">{{ $tx->description ?? '—' }}</span>
-                                @if($tx->detail)
-                                    <span class="desc-detail" title="{{ $tx->detail }}">{{ $tx->detail }}</span>
-                                @endif
-                            </td>
-
-                            {{-- Kategori --}}
-                            <td class="cell-cat">
-                                @if($isTransfer)
-                                    <span class="type-badge badge-transfer">
-                                        <i class="bi bi-arrow-left-right" style="font-size:10px;"></i> Transfer
-                                    </span>
-                                @elseif($tx->category)
-                                    <span class="cat-pill">
-                                        <span class="cat-dot" style="background:{{ $tx->category->type === 'income' ? '#15803d' : '#b91c1c' }}"></span>
-                                        {{ $tx->category->name }}
-                                    </span>
-                                @else
-                                    <span style="color:#e5e7eb;font-size:12px;">—</span>
-                                @endif
-                            </td>
-
-                            {{-- Dompet --}}
-                            <td class="cell-wallet">
-                                @if($isTransfer)
-                                    @php
-                                        $toWallet = \App\Models\Transaction::where('transfer_group_id', $tx->transfer_group_id)
-                                            ->where('amount', '>', 0)->first()?->wallet;
-                                    @endphp
-                                    <div class="wallet-chip">
-                                        <span style="font-weight:600;color:#111827;">{{ $tx->wallet?->name ?? '—' }}</span>
-                                        <span class="wallet-arrow"><i class="bi bi-arrow-right"></i></span>
-                                        <span style="font-weight:600;color:#111827;">{{ $toWallet?->name ?? '—' }}</span>
-                                    </div>
-                                @else
-                                    <div class="wallet-chip">
-                                        <i class="bi bi-wallet2" style="font-size:11px;flex-shrink:0;"></i>
-                                        <span style="font-weight:600;color:#111827;overflow:hidden;text-overflow:ellipsis;">{{ $tx->wallet?->name ?? '—' }}</span>
-                                    </div>
-                                @endif
-                            </td>
-
-                            {{-- Jenis --}}
-                            <td>
-                                @if($isTransfer)
-                                    <span class="type-badge badge-transfer">Transfer</span>
-                                @elseif($isIncome)
-                                    <span class="type-badge badge-income">Pemasukan</span>
-                                @else
-                                    <span class="type-badge badge-expense">Pengeluaran</span>
-                                @endif
-                            </td>
-
-                            {{-- Jumlah --}}
-                            <td class="cell-amount {{ $isTransfer ? 'amt-transfer' : ($isIncome ? 'amt-income' : 'amt-expense') }}">
-                                @if($isTransfer)
-                                    {{ $tx->formatted_amount }}
-                                @else
-                                    {{ $isIncome ? '+' : '−' }} {{ $tx->formatted_amount }}
-                                @endif
-                            </td>
-
-                            {{-- Aksi --}}
-                            <td class="cell-actions">
-                                @php
-                                    $toWalletId = null;
-                                    if ($isTransfer) {
-                                        $toWalletId = \App\Models\Transaction::where('transfer_group_id', $tx->transfer_group_id)
-                                            ->where('amount', '>', 0)->value('wallet_id');
-                                    }
-                                @endphp
-                                <button class="btn-icon me-1"
-                                    data-bs-toggle="modal" data-bs-target="#txModal"
-                                    onclick="editTx(
-                                        {{ $tx->id }},
-                                        '{{ addslashes($tx->description ?? '') }}',
-                                        '{{ addslashes($tx->detail ?? '') }}',
-                                        {{ abs($tx->amount) }},
-                                        '{{ $tx->transaction_date->format('Y-m-d') }}',
-                                        {{ $tx->wallet_id ?? 'null' }},
-                                        {{ $tx->category_id ?? 'null' }},
-                                        '{{ $isTransfer ? 'transfer' : ($isIncome ? 'income' : 'expense') }}',
-                                        {{ $toWalletId ?? 'null' }}
-                                    )"
-                                    title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <form method="POST" action="{{ route('transaction.destroy', $tx) }}" class="d-inline"
-                                      onsubmit="return confirm('Hapus transaksi ini? Saldo dompet akan dikembalikan.')">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="btn-icon btn-icon-del" title="Hapus">
-                                        <i class="bi bi-trash3"></i>
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="7">
-                                <div class="empty-state">
-                                    <i class="bi bi-inbox"></i>
-                                    Belum ada transaksi. Klik <strong>Tambah Transaksi</strong> untuk memulai.
-                                </div>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+        <div id="transactionTableContainer">
+             @include('pages.transaction.partials.table')
         </div>
-
-        {{-- Pagination --}}
-        @if($transactions->hasPages())
-        <div class="tx-pagination">
-            <div class="pg-info">
-                Menampilkan {{ $transactions->firstItem() }}–{{ $transactions->lastItem() }}
-                dari {{ $transactions->total() }} transaksi
-            </div>
-            <div class="pg-btns">
-                @if($transactions->onFirstPage())
-                    <span class="pg-btn disabled"><i class="bi bi-chevron-left"></i></span>
-                @else
-                    <a href="{{ $transactions->previousPageUrl() }}" class="pg-btn"><i class="bi bi-chevron-left"></i></a>
-                @endif
-
-                @foreach($transactions->getUrlRange(1, $transactions->lastPage()) as $page => $url)
-                    @if(abs($page - $transactions->currentPage()) <= 2 || $page === 1 || $page === $transactions->lastPage())
-                        <a href="{{ $url }}" class="pg-btn {{ $page == $transactions->currentPage() ? 'active' : '' }}">{{ $page }}</a>
-                    @elseif(abs($page - $transactions->currentPage()) === 3)
-                        <span class="pg-btn disabled">…</span>
-                    @endif
-                @endforeach
-
-                @if($transactions->hasMorePages())
-                    <a href="{{ $transactions->nextPageUrl() }}" class="pg-btn"><i class="bi bi-chevron-right"></i></a>
-                @else
-                    <span class="pg-btn disabled"><i class="bi bi-chevron-right"></i></span>
-                @endif
-            </div>
-        </div>
-        @endif
     </div>
 
     {{-- ════════════════════════════════════════════════════════════
-         MODAL TRANSAKSI — Create / Edit (Income, Expense, Transfer)
+         MODAL TRANSAKSI — Create / Edit (Income, Expense, Transfer, Split)
     ════════════════════════════════════════════════════════════ --}}
     <div class="modal fade" id="txModal" tabindex="-1" aria-labelledby="txModalLabel">
-        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:500px;">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:520px;">
             <div class="modal-content" style="border-radius:16px;border:1px solid #e5e7eb;">
                 <div class="modal-header" style="border-bottom:1px solid #f3f4f6;padding:18px 24px;">
                     <h5 class="modal-title" id="txModalLabel" style="font-size:15px;font-weight:700;">Tambah Transaksi</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
 
-                <form id="txForm" method="POST" action="{{ route('transaction.store') }}">
+                <form id="txForm" method="POST" action="{{ route('transaction.store') }}" enctype="multipart/form-data">
                     @csrf
                     <span id="txMethodField"></span>
                     <input type="hidden" name="type" id="txType" value="expense">
@@ -333,21 +147,47 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="mb-3">
+                            
+                            {{-- Split Checkbox Toggle --}}
+                            <div class="mb-3" id="splitToggleSection">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="is_split" id="txIsSplit" value="1" onchange="toggleSplitMode()">
+                                    <label class="form-check-label fw-semibold" for="txIsSplit" style="font-size:13px;">Pecah Transaksi (Split Transaction)</label>
+                                </div>
+                            </div>
+
+                            {{-- Dynamic Split Area --}}
+                            <div id="splitSection" style="display:none; border:1px solid #e5e7eb; border-radius:12px; padding:16px; margin-bottom:16px; background-color:#f9fafb;">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span class="fw-bold" style="font-size:12px;color:#374151;">Pecahan Transaksi</span>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" style="font-size:11px;border-radius:6px;padding:2px 8px;" onclick="addSplitRow()">
+                                        <i class="bi bi-plus-lg"></i> Tambah Pos
+                                    </button>
+                                </div>
+                                <div id="splitRowsContainer">
+                                    <!-- Dynamic split rows go here -->
+                                </div>
+                                <div class="mt-2 text-end" style="font-size:11px;color:#6b7280;">
+                                    Total pecahan: <span id="splitTotalSum" class="fw-bold text-dark">Rp 0</span>
+                                    <span id="splitValidationMsg" class="d-block text-danger fw-semibold mt-1" style="display:none;">Jumlah pecahan harus sama dengan Jumlah total!</span>
+                                </div>
+                            </div>
+
+                            <div class="mb-3" id="categoryGroup">
                                 <label class="form-label" style="font-size:13px;font-weight:500;">
                                     Kategori <span style="color:#9ca3af;font-size:12px;">(opsional)</span>
                                 </label>
                                 <select name="category_id" id="txCategory" class="form-select" style="font-size:13px;border-radius:9px;" onchange="updateTypeFromCategory()">
                                     <option value="">— Tanpa kategori —</option>
                                     @if($categories->where('type','expense')->isNotEmpty())
-                                        <optgroup label="Pengeluaran">
+                                        <optgroup label="Pengeluaran" id="optExpense">
                                             @foreach($categories->where('type','expense') as $cat)
                                                 <option value="{{ $cat->id }}" data-type="expense">{{ $cat->name }}</option>
                                             @endforeach
                                         </optgroup>
                                     @endif
                                     @if($categories->where('type','income')->isNotEmpty())
-                                        <optgroup label="Pemasukan">
+                                        <optgroup label="Pemasukan" id="optIncome">
                                             @foreach($categories->where('type','income') as $cat)
                                                 <option value="{{ $cat->id }}" data-type="income">{{ $cat->name }}</option>
                                             @endforeach
@@ -390,7 +230,7 @@
                             <label class="form-label" style="font-size:13px;font-weight:500;">Deskripsi</label>
                             <input type="text" name="description" id="txDesc" class="form-control"
                                    style="font-size:13px;border-radius:9px;"
-                                   placeholder="cth. Beli makan siang, Gaji, Transfer BRI…">
+                                   placeholder="cth. Beli makan siang, Gaji, Transfer BRI…" autocomplete="off">
                         </div>
 
                         {{-- Jumlah & Tanggal --}}
@@ -406,6 +246,15 @@
                                 <input type="date" name="transaction_date" id="txDate" class="form-control"
                                        style="font-size:13px;border-radius:9px;"
                                        value="{{ now()->format('Y-m-d') }}" required>
+                            </div>
+                        </div>
+
+                        {{-- Unggah Resi --}}
+                        <div class="mb-3">
+                            <label class="form-label" style="font-size:13px;font-weight:500;">Unggah Struk Fisik <span style="color:#9ca3af;font-size:12px;">(opsional)</span></label>
+                            <input type="file" name="receipt_image" id="txReceiptImage" class="form-control" style="font-size:13px;border-radius:9px;" accept="image/*" onchange="previewReceiptImage(this)">
+                            <div id="txReceiptPreviewContainer" style="display:none;margin-top:8px;">
+                                <img id="txReceiptPreview" src="" alt="Resi Preview" style="max-height:100px;border-radius:8px;border:1px solid #e5e7eb;">
                             </div>
                         </div>
 
@@ -435,7 +284,87 @@
         </div>
     </div>
 
+    {{-- Lightbox Struk Modal --}}
+    <div class="modal fade" id="receiptLightboxModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 600px;">
+            <div class="modal-content" style="border-radius:16px; overflow:hidden;">
+                <div class="modal-header" style="border-bottom:none; padding:12px 16px; position:absolute; right:0; top:0; z-index:10;">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="background-color:#fff; padding:8px; border-radius:50%; box-shadow:0 2px 8px rgba(0,0,0,0.1);"></button>
+                </div>
+                <div class="modal-body p-0 text-center bg-black">
+                    <img id="lightboxImage" src="" alt="Receipt Lightbox" style="max-width:100%; max-height:85vh; object-fit:contain;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Floating Bulk Action Bar --}}
+    <div id="bulkActionBar" class="bulk-action-bar shadow-lg" style="display:none; position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:999; background:white; border:1px solid #e5e7eb; border-radius:12px; padding:12px 24px; align-items:center; gap:16px;">
+        <div class="text-secondary" style="font-size:13px; font-weight:500;">
+            Terpilih: <span id="bulkSelectedCount" class="fw-bold text-dark">0</span> transaksi
+        </div>
+        <div style="height:20px; width:1px; background:#e5e7eb;"></div>
+        
+        {{-- Ubah Kategori Massal --}}
+        <form id="bulkUpdateCategoryForm" method="POST" action="{{ route('transaction.bulk-update-category') }}" style="display:flex; align-items:center; gap:8px; margin:0;">
+            @csrf
+            <select name="category_id" class="form-select form-select-sm" style="font-size:12px; border-radius:8px; width:160px;" required>
+                <option value="">Ubah kategori ke...</option>
+                @foreach($categories as $cat)
+                    <option value="{{ $cat->id }}">{{ $cat->name }} ({{ $cat->type === 'income' ? 'Masuk' : 'Keluar' }})</option>
+                @endforeach
+            </select>
+            <button type="submit" class="btn btn-sm btn-outline-primary" style="font-size:12px; border-radius:8px;">Terapkan</button>
+        </form>
+
+        <div style="height:20px; width:1px; background:#e5e7eb;"></div>
+
+        {{-- Hapus Massal --}}
+        <form id="bulkDeleteForm" method="POST" action="{{ route('transaction.bulk-destroy') }}" style="margin:0;">
+            @csrf
+            <button type="submit" class="btn btn-sm btn-danger" style="font-size:12px; border-radius:8px;" onclick="return confirm('Hapus transaksi terpilih? Saldo dompet akan dikembalikan.')">
+                <i class="bi bi-trash me-1"></i> Hapus Terpilih
+            </button>
+        </form>
+    </div>
+
 @endsection
+
+@push('css')
+<style>
+    .bulk-action-bar {
+        border-radius: 16px !important;
+        border: 1px solid #e5e7eb !important;
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+        transition: all 0.3s ease;
+    }
+    .split-row {
+        background: white;
+        border: 1px solid #f3f4f6;
+        border-radius: 8px;
+        padding: 8px 4px;
+    }
+    .pagination-link {
+        cursor: pointer;
+    }
+    .type-btn.transfer-active {
+        background-color: #2563eb;
+        color: white;
+    }
+    .tx-count-badge {
+        background: #f3f4f6;
+        color: #374151;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 9999px;
+        margin-left: 6px;
+        vertical-align: middle;
+    }
+</style>
+@endpush
 
 @push('js')
 <script>
@@ -449,6 +378,7 @@
             var el = document.getElementById('txType' + t.charAt(0).toUpperCase() + t.slice(1));
             el.className = 'type-btn' + (t === type ? ' ' + t + '-active' : '');
         });
+        
         var isTransfer = type === 'transfer';
         document.getElementById('normalSection').style.display   = isTransfer ? 'none' : 'block';
         document.getElementById('transferSection').style.display = isTransfer ? 'block' : 'none';
@@ -456,6 +386,16 @@
         document.getElementById('txCategory').disabled   = isTransfer;
         document.getElementById('txFromWallet').disabled = !isTransfer;
         document.getElementById('txToWallet').disabled   = !isTransfer;
+        
+        // Hide split toggle for transfers and income
+        const splitToggle = document.getElementById('splitToggleSection');
+        if (type === 'expense') {
+            splitToggle.style.display = 'block';
+        } else {
+            splitToggle.style.display = 'none';
+            document.getElementById('txIsSplit').checked = false;
+            toggleSplitMode();
+        }
         
         var adminFeeEl = document.getElementById('txAdminFee');
         if (adminFeeEl) adminFeeEl.disabled = !isTransfer;
@@ -480,7 +420,7 @@
     window.openCreate = function () { resetTxModal(); };
 
     /* ── Open edit modal ─────────────────────────────────────────── */
-    window.editTx = function (id, desc, detail, amount, date, walletId, categoryId, type, toWalletId) {
+    window.editTx = function (id, desc, detail, amount, date, walletId, categoryId, type, toWalletId, isSplit) {
         resetTxModal();
         document.getElementById('txModalLabel').textContent = 'Edit Transaksi';
         selectTxType(type || 'expense');
@@ -505,6 +445,29 @@
             document.getElementById('detailChevron').className = 'bi bi-chevron-up';
         }
 
+        // Handle Split loading
+        if (isSplit) {
+            document.getElementById('txIsSplit').checked = true;
+            toggleSplitMode();
+            
+            const container = document.getElementById('splitRowsContainer');
+            container.innerHTML = '<div class="text-center py-2" style="font-size:12px;color:#6b7280;"><i class="bi bi-hourglass-split"></i> Memuat pecahan...</div>';
+            
+            fetch(`/transaction/${id}/splits`)
+                .then(res => res.json())
+                .then(splits => {
+                    container.innerHTML = '';
+                    splits.forEach(split => {
+                        addSplitRow(split.category_id, Math.abs(parseFloat(split.amount)), split.description);
+                    });
+                    calculateSplitSum();
+                })
+                .catch(err => {
+                    console.error('Error fetching splits:', err);
+                    container.innerHTML = '<div class="text-danger text-center py-2" style="font-size:12px;">Gagal memuat pecahan.</div>';
+                });
+        }
+
         document.getElementById('txForm').action = '/transaction/' + id;
         document.getElementById('txMethodField').innerHTML = '<input type="hidden" name="_method" value="PUT">';
     };
@@ -516,14 +479,372 @@
         document.getElementById('txForm').action = '{{ route('transaction.store') }}';
         document.getElementById('txMethodField').innerHTML = '';
         document.getElementById('txDate').value = '{{ now()->format('Y-m-d') }}';
+        
+        // Reset split sections
+        document.getElementById('txIsSplit').checked = false;
+        document.getElementById('splitSection').style.display = 'none';
+        document.getElementById('splitRowsContainer').innerHTML = '';
+        document.getElementById('txCategory').disabled = false;
+        document.getElementById('txSubmitBtn').disabled = false;
+
         var adminFeeEl = document.getElementById('txAdminFee');
         if (adminFeeEl) adminFeeEl.value = '';
         document.getElementById('detailSection').style.display = 'none';
         document.getElementById('detailChevron').className = 'bi bi-chevron-down';
+        
+        // Reset receipt preview
+        document.getElementById('txReceiptPreviewContainer').style.display = 'none';
+        document.getElementById('txReceiptPreview').src = '';
+        document.getElementById('txReceiptImage').value = '';
+
         selectTxType('expense');
     }
 
     document.getElementById('txModal').addEventListener('hidden.bs.modal', resetTxModal);
+
+    /* ── Split Transaction Logic ─────────────────────────────────── */
+    let splitRowIndex = 0;
+
+    window.toggleSplitMode = function () {
+        const isSplit = document.getElementById('txIsSplit').checked;
+        const splitSection = document.getElementById('splitSection');
+        const normalCategory = document.getElementById('txCategory');
+        
+        splitSection.style.display = isSplit ? 'block' : 'none';
+        
+        if (isSplit) {
+            normalCategory.removeAttribute('required');
+            normalCategory.disabled = true;
+            
+            const container = document.getElementById('splitRowsContainer');
+            if (container.children.length === 0) {
+                addSplitRow();
+            }
+        } else {
+            normalCategory.disabled = false;
+        }
+        calculateSplitSum();
+    };
+
+    window.addSplitRow = function (categoryId = '', amount = '', description = '') {
+        const container = document.getElementById('splitRowsContainer');
+        const index = splitRowIndex++;
+        
+        let categoryOptions = '<option value="">Pilih kategori...</option>';
+        const categoriesList = @json($categories->where('type', 'expense')->values());
+        categoriesList.forEach(cat => {
+            const selected = cat.id == categoryId ? 'selected' : '';
+            categoryOptions += `<option value="${cat.id}" ${selected}>${cat.name}</option>`;
+        });
+
+        const rowHtml = `
+            <div class="row g-2 mb-2 align-items-center split-row" id="splitRow_${index}">
+                <div class="col-5">
+                    <select name="splits[${index}][category_id]" class="form-select split-category-select" style="font-size:12px;border-radius:8px;" required>
+                        ${categoryOptions}
+                    </select>
+                </div>
+                <div class="col-4">
+                    <input type="number" name="splits[${index}][amount]" value="${amount}" class="form-control split-amount-input" style="font-size:12px;border-radius:8px;" placeholder="Jumlah" min="1" required oninput="calculateSplitSum()">
+                </div>
+                <div class="col-3 d-flex gap-1 align-items-center">
+                    <input type="text" name="splits[${index}][description]" value="${description}" class="form-control" style="font-size:12px;border-radius:8px;" placeholder="Ket (opsional)">
+                    <button type="button" class="btn btn-sm btn-outline-danger" style="padding: 4px 8px;border-radius:8px;" onclick="removeSplitRow(${index})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        container.insertAdjacentHTML('beforeend', rowHtml);
+        calculateSplitSum();
+    };
+
+    window.removeSplitRow = function (index) {
+        const row = document.getElementById(`splitRow_${index}`);
+        if (row) row.remove();
+        calculateSplitSum();
+    };
+
+    window.calculateSplitSum = function () {
+        const amountInputs = document.querySelectorAll('.split-amount-input');
+        let sum = 0;
+        amountInputs.forEach(input => {
+            sum += parseFloat(input.value) || 0;
+        });
+
+        const totalInput = document.getElementById('txAmount');
+        const mainAmount = parseFloat(totalInput.value) || 0;
+        
+        const sumSpan = document.getElementById('splitTotalSum');
+        if (sumSpan) {
+            sumSpan.textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(sum);
+        }
+
+        const validationMsg = document.getElementById('splitValidationMsg');
+        const isSplit = document.getElementById('txIsSplit').checked;
+        
+        if (isSplit && sum !== mainAmount) {
+            if (validationMsg) validationMsg.style.display = 'block';
+            document.getElementById('txSubmitBtn').disabled = true;
+        } else {
+            if (validationMsg) validationMsg.style.display = 'none';
+            document.getElementById('txSubmitBtn').disabled = false;
+        }
+    };
+
+    document.getElementById('txAmount').addEventListener('input', calculateSplitSum);
+
+    /* ── Receipt Image Preview ───────────────────────────────────── */
+    window.previewReceiptImage = function (input) {
+        const container = document.getElementById('txReceiptPreviewContainer');
+        const img = document.getElementById('txReceiptPreview');
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                img.src = e.target.result;
+                container.style.display = 'block';
+            };
+            reader.readAsDataURL(input.files[0]);
+        } else {
+            img.src = '';
+            container.style.display = 'none';
+        }
+    };
+
+    /* ── Lightbox Receipt Preview ────────────────────────────────── */
+    window.showReceiptLightbox = function (imageUrl) {
+        const img = document.getElementById('lightboxImage');
+        if (img) {
+            img.src = imageUrl;
+            const modal = new bootstrap.Modal(document.getElementById('receiptLightboxModal'));
+            modal.show();
+        }
+    };
+
+    /* ── Keyboard Shortcuts (Hotkeys) ────────────────────────────── */
+    document.addEventListener('keydown', function (e) {
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT')) {
+            if (e.key === 'Escape') {
+                const modalEl = document.getElementById('txModal');
+                if (modalEl && modalEl.classList.contains('show')) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+            }
+            return;
+        }
+
+        if (e.key === 'n' || e.key === 'N') {
+            e.preventDefault();
+            const createBtn = document.querySelector('[data-bs-target="#txModal"]');
+            if (createBtn) createBtn.click();
+        } else if (e.key === '/') {
+            e.preventDefault();
+            const filterDateInput = document.querySelector('input[name="date_from"]');
+            if (filterDateInput) filterDateInput.focus();
+        }
+    });
+
+    /* ── Smart Category Suggestion ───────────────────────────────── */
+    const descInput = document.getElementById('txDesc');
+    if (descInput) {
+        let debounceTimer;
+        descInput.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            const query = this.value.trim();
+            
+            const currentType = document.getElementById('txType').value;
+            if (currentType === 'transfer') return;
+            if (document.getElementById('txIsSplit').checked) return; // skip for split
+
+            if (query.length < 2) return;
+
+            debounceTimer = setTimeout(() => {
+                fetch(`/transaction/suggest-category?query=${encodeURIComponent(query)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.category_id) {
+                            const categorySelect = document.getElementById('txCategory');
+                            if (categorySelect) {
+                                categorySelect.value = data.category_id;
+                                
+                                categorySelect.style.transition = 'background-color 0.3s ease';
+                                categorySelect.style.backgroundColor = '#dcfce7'; // light green
+                                setTimeout(() => {
+                                    categorySelect.style.backgroundColor = '';
+                                }, 1000);
+                            }
+                        }
+                    })
+                    .catch(err => console.error('Error suggesting category:', err));
+            }, 300);
+        });
+    }
+
+    /* ── AJAX Filter, Search & Pagination ────────────────────────── */
+    const filterForm = document.querySelector('.filter-bar');
+    if (filterForm) {
+        filterForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            fetchTransactions();
+        });
+        filterForm.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', fetchTransactions);
+        });
+        filterForm.querySelectorAll('input[type="date"]').forEach(input => {
+            input.addEventListener('change', fetchTransactions);
+        });
+
+        const resetBtn = filterForm.querySelector('a.btn-dp-default');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                filterForm.reset();
+                fetchTransactions(true);
+            });
+        }
+    }
+
+    function fetchTransactions(reset = false) {
+        let url = new URL('{{ route('transaction.index') }}');
+        if (!reset && filterForm) {
+            const formData = new FormData(filterForm);
+            for (let [key, val] of formData.entries()) {
+                if (val) url.searchParams.set(key, val);
+            }
+        }
+        
+        const tableWrap = document.getElementById('txTableWrap');
+        if (tableWrap) tableWrap.style.opacity = '0.5';
+
+        fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.text())
+        .then(html => {
+            document.getElementById('transactionTableContainer').innerHTML = html;
+            bindTableEvents();
+            updateCountBadge();
+        })
+        .catch(err => console.error('Error fetching transactions:', err))
+        .finally(() => {
+            const newTableWrap = document.getElementById('txTableWrap');
+            if (newTableWrap) newTableWrap.style.opacity = '1';
+        });
+    }
+
+    function fetchTransactionsWithPage(url) {
+        if (filterForm) {
+            const formData = new FormData(filterForm);
+            for (let [key, val] of formData.entries()) {
+                if (val) url.searchParams.set(key, val);
+            }
+        }
+        
+        const tableWrap = document.getElementById('txTableWrap');
+        if (tableWrap) tableWrap.style.opacity = '0.5';
+
+        fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.text())
+        .then(html => {
+            document.getElementById('transactionTableContainer').innerHTML = html;
+            bindTableEvents();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        })
+        .catch(err => console.error('Error paginating transactions:', err));
+    }
+
+    function updateCountBadge() {
+        const tableWrap = document.getElementById('txTableWrap');
+        const badge = document.querySelector('.tx-count-badge');
+        if (tableWrap && badge) {
+            badge.textContent = tableWrap.getAttribute('data-total') || '0';
+        }
+    }
+
+    /* ── Ekspor Data ─────────────────────────────────────────────── */
+    window.triggerExport = function () {
+        let url = new URL('{{ route('transaction.export') }}');
+        if (filterForm) {
+            const formData = new FormData(filterForm);
+            for (let [key, val] of formData.entries()) {
+                if (val) url.searchParams.set(key, val);
+            }
+        }
+        window.location.href = url.toString();
+    };
+
+    /* ── Bulk Actions Logic ──────────────────────────────────────── */
+    window.bindTableEvents = function () {
+        // Pagination link click events
+        document.querySelectorAll('.pagination-link').forEach(link => {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                const url = new URL(this.href);
+                fetchTransactionsWithPage(url);
+            });
+        });
+
+        // Bulk Selection checkbox events
+        const masterCheckbox = document.getElementById('bulkSelectAll');
+        const itemCheckboxes = document.querySelectorAll('.bulk-select-item');
+        
+        if (masterCheckbox) {
+            masterCheckbox.addEventListener('change', function () {
+                itemCheckboxes.forEach(cb => cb.checked = this.checked);
+                updateBulkActionBar();
+            });
+        }
+
+        itemCheckboxes.forEach(cb => {
+            cb.addEventListener('change', function () {
+                if (masterCheckbox) {
+                    masterCheckbox.checked = Array.from(itemCheckboxes).every(c => c.checked);
+                }
+                updateBulkActionBar();
+            });
+        });
+    };
+
+    function updateBulkActionBar() {
+        const itemCheckboxes = document.querySelectorAll('.bulk-select-item');
+        const checkedBoxes = Array.from(itemCheckboxes).filter(cb => cb.checked);
+        const checkedIds = checkedBoxes.map(cb => cb.value);
+        
+        const bar = document.getElementById('bulkActionBar');
+        const countSpan = document.getElementById('bulkSelectedCount');
+        
+        if (checkedIds.length > 0) {
+            bar.style.display = 'flex';
+            countSpan.textContent = checkedIds.length;
+            
+            // Inject selected IDs into forms
+            document.querySelectorAll('#bulkActionBar form').forEach(form => {
+                form.querySelectorAll('input[name="transaction_ids[]"]').forEach(i => i.remove());
+                checkedIds.forEach(id => {
+                    const hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'transaction_ids[]';
+                    hiddenInput.value = id;
+                    form.appendChild(hiddenInput);
+                });
+            });
+        } else {
+            bar.style.display = 'none';
+            countSpan.textContent = '0';
+        }
+    }
+
+    // Initialize events on page load
+    bindTableEvents();
     selectTxType('expense');
 })();
 </script>

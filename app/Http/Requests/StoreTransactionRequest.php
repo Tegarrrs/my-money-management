@@ -27,6 +27,14 @@ class StoreTransactionRequest extends FormRequest
             // Transfer-specific
             'to_wallet_id'     => ['nullable', 'required_if:type,transfer', Rule::exists('wallets', 'id')->where('user_id', $userId)],
             'admin_fee'        => ['nullable', 'numeric', 'min:0'],
+            // Split-specific
+            'is_split'         => ['nullable', 'boolean'],
+            'splits'           => ['nullable', 'array'],
+            'splits.*.category_id' => ['nullable', Rule::exists('categories', 'id')->where('user_id', $userId)],
+            'splits.*.amount'      => ['required_if:is_split,1', 'numeric', 'min:1'],
+            'splits.*.description' => ['nullable', 'string', 'max:255'],
+            // Receipt-specific
+            'receipt_image'    => ['nullable', 'image', 'max:5120'], // max 5MB
         ];
     }
 

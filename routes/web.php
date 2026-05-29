@@ -37,6 +37,10 @@ Route::middleware('auth')->group(function () {
     // Transaction CRUD
     Route::prefix('transaction')->name('transaction.')->group(function () {
         Route::get('/', [TransactionController::class, 'index'])->name('index');
+        Route::get('/suggest-category', [TransactionController::class, 'suggestCategory'])->name('suggest-category');
+        Route::get('/export', [TransactionController::class, 'export'])->name('export');
+        Route::post('/bulk-delete', [TransactionController::class, 'bulkDestroy'])->name('bulk-destroy');
+        Route::post('/bulk-update-category', [TransactionController::class, 'bulkUpdateCategory'])->name('bulk-update-category');
         Route::post('/', [TransactionController::class, 'store'])->name('store');
         Route::put('/{transaction}', [TransactionController::class, 'update'])->name('update');
         Route::delete('/{transaction}', [TransactionController::class, 'destroy'])->name('destroy');
