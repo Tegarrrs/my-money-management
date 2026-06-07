@@ -107,18 +107,17 @@
     ════════════════════════════════════════════════════════════ --}}
     <div class="modal fade" id="txModal" tabindex="-1" aria-labelledby="txModalLabel">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" style="max-width:520px;">
-            <div class="modal-content" style="border-radius:16px;border:1px solid #e5e7eb;">
+            <form id="txForm" class="modal-content" method="POST" action="{{ route('transaction.store') }}" enctype="multipart/form-data" style="border-radius:16px;border:1px solid #e5e7eb;">
+                @csrf
+                <span id="txMethodField"></span>
+                <input type="hidden" name="type" id="txType" value="expense">
+
                 <div class="modal-header" style="border-bottom:1px solid #f3f4f6;padding:18px 24px;">
                     <h5 class="modal-title" id="txModalLabel" style="font-size:15px;font-weight:700;">Tambah Transaksi</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
 
-                <form id="txForm" method="POST" action="{{ route('transaction.store') }}" enctype="multipart/form-data">
-                    @csrf
-                    <span id="txMethodField"></span>
-                    <input type="hidden" name="type" id="txType" value="expense">
-
-                    <div class="modal-body" style="padding:20px 24px;">
+                <div class="modal-body" style="padding:20px 24px;">
 
                         {{-- Jenis --}}
                         <div class="mb-4">
@@ -279,8 +278,7 @@
                             <i class="bi bi-check-lg"></i> Simpan Transaksi
                         </button>
                     </div>
-                </form>
-            </div>
+            </form>
         </div>
     </div>
 

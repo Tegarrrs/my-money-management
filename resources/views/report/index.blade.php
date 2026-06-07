@@ -46,4 +46,7 @@
     {{-- ── Trend Chart Component ── --}}
     @include('report.components.trend', ['trend' => $report['trend']])
 
+    {{-- ── Detailed Transactions Component ── --}}
+    @include('report.components.details', ['transactions' => $report['transactions']])
+
 @endsection
