@@ -5,40 +5,180 @@ namespace App\Http\Controllers;
 use App\Models\Transaction;
 use App\Models\Wallet;
 use Illuminate\View\View;
+use Illuminate\Support\Carbon;
 
 class DashboardController extends Controller
 {
     public function index(): View
     {
         $userId = auth()->id();
+        $now    = Carbon::now();
 
-        $totalBalance = Wallet::forUser($userId)->sum('balance');
+        $startOfMonth     = $now->copy()->startOfMonth();
+        $endOfMonth       = $now->copy()->endOfMonth();
+        $startOfLastMonth = $now->copy()->subMonth()->startOfMonth();
+        $endOfLastMonth   = $now->copy()->subMonth()->endOfMonth();
 
-        $totalIncome = Transaction::forUser($userId)
+        /* ── Total balance ──────────────────────────────── */
+        $totalBalance = (float) Wallet::forUser($userId)->sum('balance');
+
+        /* ── Monthly income / expense ───────────────────── */
+        $monthlyIncome = (float) Transaction::forUser($userId)
             ->income()
+            ->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
             ->sum('amount');
 
-        $totalExpense = Transaction::forUser($userId)
+        $monthlyExpense = abs((float) Transaction::forUser($userId)
             ->expense()
+            ->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
+            ->sum('amount'));
+
+        /* ── Previous-month comparison ───────────────────── */
+        $lastMonthIncome = (float) Transaction::forUser($userId)
+            ->income()
+            ->whereBetween('transaction_date', [$startOfLastMonth, $endOfLastMonth])
             ->sum('amount');
 
+        $lastMonthExpense = abs((float) Transaction::forUser($userId)
+            ->expense()
+            ->whereBetween('transaction_date', [$startOfLastMonth, $endOfLastMonth])
+            ->sum('amount'));
+
+        /* ── Saving rate ─────────────────────────────────── */
+        $savingRate = $monthlyIncome > 0
+            ? round((($monthlyIncome - $monthlyExpense) / $monthlyIncome) * 100)
+            : 0;
+
+        $lastMonthSavingRate = $lastMonthIncome > 0
+            ? round((($lastMonthIncome - $lastMonthExpense) / $lastMonthIncome) * 100)
+            : 0;
+
+        $savingRateChange = $savingRate - $lastMonthSavingRate;
+
+        /* ── Percent changes ─────────────────────────────── */
+        $incomeChange = $lastMonthIncome > 0
+            ? round((($monthlyIncome - $lastMonthIncome) / $lastMonthIncome) * 100, 1)
+            : ($monthlyIncome > 0 ? 100 : 0);
+
+        $expenseChange = $lastMonthExpense > 0
+            ? round((($monthlyExpense - $lastMonthExpense) / $lastMonthExpense) * 100, 1)
+            : ($monthlyExpense > 0 ? 100 : 0);
+
+        /* ── Monthly transaction count ───────────────────── */
+        $monthlyTxCount = Transaction::forUser($userId)
+            ->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
+            ->count();
+
+        /* ── Budget usage (%) ────────────────────────────── */
+        $budgetUsage = $monthlyIncome > 0
+            ? min(100, round(($monthlyExpense / $monthlyIncome) * 100))
+            : ($monthlyExpense > 0 ? 100 : 0);
+
+        /* ── Cashflow trend — 6 months ───────────────────── */
+        $cashflowLabels  = [];
+        $cashflowIncome  = [];
+        $cashflowExpense = [];
+
+        for ($i = 5; $i >= 0; $i--) {
+            $m = $now->copy()->subMonths($i);
+            $s = $m->copy()->startOfMonth();
+            $e = $m->copy()->endOfMonth();
+
+            $cashflowLabels[]  = $m->translatedFormat('M');
+            $cashflowIncome[]  = (float) Transaction::forUser($userId)->income()
+                ->whereBetween('transaction_date', [$s, $e])->sum('amount');
+            $cashflowExpense[] = abs((float) Transaction::forUser($userId)->expense()
+                ->whereBetween('transaction_date', [$s, $e])->sum('amount'));
+        }
+
+        /* ── Expense by category — donut chart ───────────── */
+        $expenseCatRows = Transaction::with('category')
+            ->forUser($userId)
+            ->expense()
+            ->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
+            ->whereNotNull('category_id')
+            ->selectRaw('category_id, SUM(ABS(amount)) as total_amount')
+            ->groupBy('category_id')
+            ->orderByDesc('total_amount')
+            ->limit(6)
+            ->get();
+
+        $donutLabels = $expenseCatRows->map(fn ($r) => $r->category?->name ?? 'Lainnya')->toArray();
+        $donutValues = $expenseCatRows->map(fn ($r) => (int) round((float) $r->total_amount))->toArray();
+
+        /* ── Top spending categories ─────────────────────── */
+        $topCategories = Transaction::with('category')
+            ->forUser($userId)
+            ->expense()
+            ->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
+            ->whereNotNull('category_id')
+            ->selectRaw('category_id, SUM(ABS(amount)) as total_amount')
+            ->groupBy('category_id')
+            ->orderByDesc('total_amount')
+            ->limit(5)
+            ->get();
+
+        /* ── Wallets ─────────────────────────────────────── */
+        $wallets = Wallet::forUser($userId)->orderByDesc('balance')->get();
+
+        /* ── Recent transactions ─────────────────────────── */
         $recentTransactions = Transaction::with(['category', 'wallet'])
             ->forUser($userId)
             ->where(function ($q) {
                 $q->whereNull('transfer_group_id')
-                  ->orWhere('amount', '<', 0); // only show debit leg of transfers
+                  ->orWhere('amount', '<', 0);
             })
-            ->recent(5)
+            ->recent(8)
             ->get();
 
-        $wallets = Wallet::forUser($userId)->orderBy('name')->get();
+        /* ── Financial health score ───────────────────────── */
+        $cashflowPositive = $monthlyIncome >= $monthlyExpense;
+        $healthScore = 0;
+
+        // Saving rate  → 40 pts
+        if ($savingRate >= 20)      $healthScore += 40;
+        elseif ($savingRate >= 10)  $healthScore += 25;
+        elseif ($savingRate > 0)    $healthScore += 10;
+
+        // Positive total balance → 30 pts
+        if ($totalBalance > 0)      $healthScore += 30;
+        elseif ($totalBalance >= 0) $healthScore += 10;
+
+        // Cashflow → 30 pts
+        if ($cashflowPositive) $healthScore += 30;
+        elseif ($monthlyExpense > 0 && ($monthlyIncome / $monthlyExpense) >= 0.9) $healthScore += 15;
+
+        $healthScore = min(100, max(0, $healthScore));
+
+        /* ── Insight helpers ─────────────────────────────── */
+        $largestCategory = $topCategories->first();
+        $negativeWallet  = $wallets->first(fn ($w) => $w->balance < 0);
 
         return view('dashboard', compact(
             'totalBalance',
-            'totalIncome',
-            'totalExpense',
-            'recentTransactions',
+            'monthlyIncome',
+            'monthlyExpense',
+            'lastMonthIncome',
+            'lastMonthExpense',
+            'savingRate',
+            'lastMonthSavingRate',
+            'savingRateChange',
+            'incomeChange',
+            'expenseChange',
+            'monthlyTxCount',
+            'budgetUsage',
+            'cashflowLabels',
+            'cashflowIncome',
+            'cashflowExpense',
+            'donutLabels',
+            'donutValues',
+            'topCategories',
             'wallets',
+            'recentTransactions',
+            'healthScore',
+            'cashflowPositive',
+            'largestCategory',
+            'negativeWallet',
         ));
     }
 }
