@@ -43,6 +43,7 @@ return [
 
     'gemini' => [
         'api_key' => env('GEMINI_API_KEY'),
+        'report_model' => env('GEMINI_REPORT_MODEL', 'gemini-flash-latest'),
     ],
 
 ];

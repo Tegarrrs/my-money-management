@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
-use Illuminate\Support\Str;
 
 class ProviderController extends Controller
 {
@@ -23,16 +22,17 @@ class ProviderController extends Controller
             $user = User::where('google_id', $googleUser->id)->orWhere('email', $googleUser->email)->first();
 
             if ($user) {
-                if (!$user->google_id) {
+                if (! $user->google_id) {
                     $user->update([
                         'google_id' => $googleUser->id,
-                        'avatar' => $googleUser->avatar ?? $user->avatar
+                        'avatar' => $googleUser->avatar ?? $user->avatar,
                     ]);
-                } else if ($googleUser->avatar && $user->avatar !== $googleUser->avatar) {
+                } elseif ($googleUser->avatar && $user->avatar !== $googleUser->avatar) {
                     $user->update(['avatar' => $googleUser->avatar]);
                 }
                 Auth::login($user);
-                return redirect()->intended(route('dashboard', absolute: false));
+
+                return redirect()->intended(route('dashboard.index', absolute: false));
             }
 
             $newUser = User::create([
@@ -40,12 +40,12 @@ class ProviderController extends Controller
                 'email' => $googleUser->email,
                 'google_id' => $googleUser->id,
                 'password' => null, // Password nullable since it's OAuth
-                'avatar' => $googleUser->avatar
+                'avatar' => $googleUser->avatar,
             ]);
 
             Auth::login($newUser);
 
-            return redirect()->intended(route('dashboard', absolute: false));
+            return redirect()->route('onboarding.show');
         } catch (\Exception $e) {
             return redirect('/login')->withErrors(['email' => 'Gagal masuk dengan Google. Silakan coba lagi.']);
         }

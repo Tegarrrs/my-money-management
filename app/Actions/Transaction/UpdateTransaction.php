@@ -8,6 +8,7 @@ use App\Models\Receipt;
 use App\Models\Transaction;
 use App\Models\Wallet;
 use App\Services\TransactionParser;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -22,16 +23,14 @@ class UpdateTransaction
 
             // ── Upload Receipt ──
             $receiptId = $transaction->receipt_id;
-            if (!empty($data['receipt_image']) && $data['receipt_image'] instanceof \Illuminate\Http\UploadedFile) {
+            if (! empty($data['receipt_image']) && $data['receipt_image'] instanceof UploadedFile) {
                 $file = $data['receipt_image'];
-                $filename = time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
-                $destinationPath = public_path('uploads/receipts');
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0755, true);
+                $path = $file->store('receipts', 'local');
+
+                if ($path === false) {
+                    throw new \RuntimeException('Gagal menyimpan gambar struk.');
                 }
-                $file->move($destinationPath, $filename);
-                $path = 'uploads/receipts/' . $filename;
-                
+
                 $receipt = Receipt::create([
                     'user_id' => $transaction->user_id,
                     'image_path' => $path,
@@ -43,8 +42,10 @@ class UpdateTransaction
             // ── HANDLE OLD SPLIT CLEANUP ──
             if ($transaction->split_group_id) {
                 $oldGroupId = $transaction->split_group_id;
-                $splits = Transaction::where('split_group_id', $oldGroupId)->get();
-                
+                $splits = Transaction::where('user_id', $transaction->user_id)
+                    ->where('split_group_id', $oldGroupId)
+                    ->get();
+
                 // Revert balances of all splits
                 foreach ($splits as $s) {
                     $w = Wallet::find($s->wallet_id);
@@ -52,19 +53,20 @@ class UpdateTransaction
                         $w->increment('balance', -(float) $s->amount);
                     }
                 }
-                
+
                 // Delete all other splits except the main one
                 Transaction::where('split_group_id', $oldGroupId)
+                    ->where('user_id', $transaction->user_id)
                     ->where('id', '!=', $transaction->id)
                     ->delete();
-                
+
                 // Clear split group ID from main transaction temporarily
                 $transaction->update(['split_group_id' => null]);
             }
 
             // ── UPDATE TO SPLIT TRANSACTION ──
-            if (!empty($data['is_split']) && !empty($data['splits'])) {
-                $wallet = Wallet::findOrFail($data['wallet_id']);
+            if (! empty($data['is_split']) && ! empty($data['splits'])) {
+                $wallet = $transaction->user->wallets()->findOrFail($data['wallet_id']);
                 $groupId = (string) Str::uuid();
                 $date = $data['transaction_date'];
                 $detail = $data['detail'] ?? null;
@@ -72,40 +74,42 @@ class UpdateTransaction
                 $isFirst = true;
 
                 foreach ($data['splits'] as $split) {
-                    $splitCategory = !empty($split['category_id']) ? Category::find($split['category_id']) : null;
+                    $splitCategory = ! empty($split['category_id'])
+                        ? $transaction->user->categories()->findOrFail($split['category_id'])
+                        : null;
                     $splitAmount = $this->parser->normaliseAmount((float) $split['amount'], $splitCategory, 'expense');
 
                     if ($isFirst) {
                         // Update the existing transaction
                         $transaction->update([
-                            'wallet_id'        => $wallet->id,
-                            'category_id'      => $splitCategory?->id,
-                            'amount'           => $splitAmount,
-                            'description'      => $split['description'] ?? $data['description'] ?? null,
-                            'detail'           => $detail,
+                            'wallet_id' => $wallet->id,
+                            'category_id' => $splitCategory?->id,
+                            'amount' => $splitAmount,
+                            'description' => $split['description'] ?? $data['description'] ?? null,
+                            'detail' => $detail,
                             'transaction_date' => $date,
-                            'split_group_id'   => $groupId,
-                            'receipt_id'       => $receiptId,
+                            'split_group_id' => $groupId,
+                            'receipt_id' => $receiptId,
                         ]);
                         $isFirst = false;
                     } else {
                         // Create a new transaction
                         $transaction->user->transactions()->create([
-                            'wallet_id'        => $wallet->id,
-                            'category_id'      => $splitCategory?->id,
-                            'amount'           => $splitAmount,
-                            'description'      => $split['description'] ?? $data['description'] ?? null,
-                            'detail'           => $detail,
+                            'wallet_id' => $wallet->id,
+                            'category_id' => $splitCategory?->id,
+                            'amount' => $splitAmount,
+                            'description' => $split['description'] ?? $data['description'] ?? null,
+                            'detail' => $detail,
                             'transaction_date' => $date,
-                            'split_group_id'   => $groupId,
-                            'receipt_id'       => $receiptId,
+                            'split_group_id' => $groupId,
+                            'receipt_id' => $receiptId,
                         ]);
                     }
 
                     $wallet->increment('balance', $splitAmount);
 
                     // Save category suggestion
-                    if ($splitCategory && !empty($split['description'])) {
+                    if ($splitCategory && ! empty($split['description'])) {
                         CategorySuggestion::updateOrCreate(
                             ['user_id' => $transaction->user_id, 'keyword' => strtolower(trim($split['description']))],
                             ['category_id' => $splitCategory->id, 'confidence' => 1.0]
@@ -118,42 +122,44 @@ class UpdateTransaction
 
             // ── TRANSFER (update both legs via transfer_group_id) ─────────
             if ($type === 'transfer' && $transaction->transfer_group_id) {
-                $groupId    = $transaction->transfer_group_id;
-                $newAmount  = (float) $data['amount'];
-                $desc       = $data['description'] ?? null;
-                $detail     = $data['detail'] ?? null;
-                $date       = $data['transaction_date'];
+                $groupId = $transaction->transfer_group_id;
+                $newAmount = (float) $data['amount'];
+                $desc = $data['description'] ?? null;
+                $detail = $data['detail'] ?? null;
+                $date = $data['transaction_date'];
 
-                $legs = Transaction::where('transfer_group_id', $groupId)->get();
+                $legs = Transaction::where('user_id', $transaction->user_id)
+                    ->where('transfer_group_id', $groupId)
+                    ->get();
                 $outLeg = $legs->where('amount', '<', 0)->first() ?? $legs->first();
-                $inLeg  = $legs->where('amount', '>=', 0)->first() ?? $legs->last();
+                $inLeg = $legs->where('amount', '>=', 0)->first() ?? $legs->last();
 
-                $fromWallet = Wallet::findOrFail($data['wallet_id']);
-                $toWallet   = Wallet::findOrFail($data['to_wallet_id']);
+                $fromWallet = $transaction->user->wallets()->findOrFail($data['wallet_id']);
+                $toWallet = $transaction->user->wallets()->findOrFail($data['to_wallet_id']);
 
                 // Revert old balances
-                $outLeg->wallet->increment('balance', abs((float)$outLeg->amount));
-                $inLeg->wallet->increment('balance', -abs((float)$inLeg->amount));
+                $outLeg->wallet->increment('balance', abs((float) $outLeg->amount));
+                $inLeg->wallet->increment('balance', -abs((float) $inLeg->amount));
 
                 // Apply new balances
                 $fromWallet->decrement('balance', $newAmount);
                 $toWallet->increment('balance', $newAmount);
 
                 $outLeg->update([
-                    'wallet_id'        => $fromWallet->id,
-                    'amount'           => -$newAmount,
-                    'description'      => $desc,
-                    'detail'           => $detail,
+                    'wallet_id' => $fromWallet->id,
+                    'amount' => -$newAmount,
+                    'description' => $desc,
+                    'detail' => $detail,
                     'transaction_date' => $date,
-                    'receipt_id'       => $receiptId,
+                    'receipt_id' => $receiptId,
                 ]);
                 $inLeg->update([
-                    'wallet_id'        => $toWallet->id,
-                    'amount'           => $newAmount,
-                    'description'      => $desc,
-                    'detail'           => $detail,
+                    'wallet_id' => $toWallet->id,
+                    'amount' => $newAmount,
+                    'description' => $desc,
+                    'detail' => $detail,
                     'transaction_date' => $date,
-                    'receipt_id'       => $receiptId,
+                    'receipt_id' => $receiptId,
                 ]);
 
                 return $transaction->fresh();
@@ -164,10 +170,12 @@ class UpdateTransaction
             $oldWalletId = $transaction->wallet_id;
 
             /** @var ?Category $newCategory */
-            $newCategory = isset($data['category_id']) ? Category::find($data['category_id']) : null;
+            $newCategory = isset($data['category_id'])
+                ? $transaction->user->categories()->findOrFail($data['category_id'])
+                : null;
 
             /** @var Wallet $newWallet */
-            $newWallet = Wallet::findOrFail($data['wallet_id']);
+            $newWallet = $transaction->user->wallets()->findOrFail($data['wallet_id']);
 
             $newAmount = $this->parser->normaliseAmount((float) $data['amount'], $newCategory, $type);
 
@@ -180,18 +188,18 @@ class UpdateTransaction
             }
 
             $transaction->update([
-                'wallet_id'        => $newWallet->id,
-                'category_id'      => $newCategory?->id,
-                'amount'           => $newAmount,
-                'description'      => $data['description'] ?? null,
-                'detail'           => $data['detail'] ?? null,
+                'wallet_id' => $newWallet->id,
+                'category_id' => $newCategory?->id,
+                'amount' => $newAmount,
+                'description' => $data['description'] ?? null,
+                'detail' => $data['detail'] ?? null,
                 'transaction_date' => $data['transaction_date'],
-                'transfer_group_id'=> null,
-                'receipt_id'       => $receiptId,
+                'transfer_group_id' => null,
+                'receipt_id' => $receiptId,
             ]);
 
             // Save category suggestion dynamically
-            if ($newCategory && !empty($data['description'])) {
+            if ($newCategory && ! empty($data['description'])) {
                 CategorySuggestion::updateOrCreate(
                     ['user_id' => $transaction->user_id, 'keyword' => strtolower(trim($data['description']))],
                     ['category_id' => $newCategory->id, 'confidence' => 1.0]

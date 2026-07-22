@@ -2,22 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Transaction;
 use App\Models\Wallet;
-use Illuminate\View\View;
 use Illuminate\Support\Carbon;
+use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
     public function index(): View
     {
         $userId = auth()->id();
-        $now    = Carbon::now();
+        $now = Carbon::now();
 
-        $startOfMonth     = $now->copy()->startOfMonth();
-        $endOfMonth       = $now->copy()->endOfMonth();
+        $startOfMonth = $now->copy()->startOfMonth();
+        $endOfMonth = $now->copy()->endOfMonth();
         $startOfLastMonth = $now->copy()->subMonth()->startOfMonth();
-        $endOfLastMonth   = $now->copy()->subMonth()->endOfMonth();
+        $endOfLastMonth = $now->copy()->subMonth()->endOfMonth();
 
         /* ── Total balance ──────────────────────────────── */
         $totalBalance = (float) Wallet::forUser($userId)->sum('balance');
@@ -66,6 +67,7 @@ class DashboardController extends Controller
 
         /* ── Monthly transaction count ───────────────────── */
         $monthlyTxCount = Transaction::forUser($userId)
+            ->where('is_balance_adjustment', false)
             ->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
             ->count();
 
@@ -75,8 +77,8 @@ class DashboardController extends Controller
             : ($monthlyExpense > 0 ? 100 : 0);
 
         /* ── Cashflow trend — 6 months ───────────────────── */
-        $cashflowLabels  = [];
-        $cashflowIncome  = [];
+        $cashflowLabels = [];
+        $cashflowIncome = [];
         $cashflowExpense = [];
 
         for ($i = 5; $i >= 0; $i--) {
@@ -84,8 +86,8 @@ class DashboardController extends Controller
             $s = $m->copy()->startOfMonth();
             $e = $m->copy()->endOfMonth();
 
-            $cashflowLabels[]  = $m->translatedFormat('M');
-            $cashflowIncome[]  = (float) Transaction::forUser($userId)->income()
+            $cashflowLabels[] = $m->translatedFormat('M');
+            $cashflowIncome[] = (float) Transaction::forUser($userId)->income()
                 ->whereBetween('transaction_date', [$s, $e])->sum('amount');
             $cashflowExpense[] = abs((float) Transaction::forUser($userId)->expense()
                 ->whereBetween('transaction_date', [$s, $e])->sum('amount'));
@@ -126,7 +128,7 @@ class DashboardController extends Controller
             ->forUser($userId)
             ->where(function ($q) {
                 $q->whereNull('transfer_group_id')
-                  ->orWhere('amount', '<', 0);
+                    ->orWhere('amount', '<', 0);
             })
             ->recent(8)
             ->get();
@@ -136,23 +138,49 @@ class DashboardController extends Controller
         $healthScore = 0;
 
         // Saving rate  → 40 pts
-        if ($savingRate >= 20)      $healthScore += 40;
-        elseif ($savingRate >= 10)  $healthScore += 25;
-        elseif ($savingRate > 0)    $healthScore += 10;
+        if ($savingRate >= 20) {
+            $healthScore += 40;
+        } elseif ($savingRate >= 10) {
+            $healthScore += 25;
+        } elseif ($savingRate > 0) {
+            $healthScore += 10;
+        }
 
         // Positive total balance → 30 pts
-        if ($totalBalance > 0)      $healthScore += 30;
-        elseif ($totalBalance >= 0) $healthScore += 10;
+        if ($totalBalance > 0) {
+            $healthScore += 30;
+        } elseif ($totalBalance >= 0) {
+            $healthScore += 10;
+        }
 
         // Cashflow → 30 pts
-        if ($cashflowPositive) $healthScore += 30;
-        elseif ($monthlyExpense > 0 && ($monthlyIncome / $monthlyExpense) >= 0.9) $healthScore += 15;
+        if ($cashflowPositive) {
+            $healthScore += 30;
+        } elseif ($monthlyExpense > 0 && ($monthlyIncome / $monthlyExpense) >= 0.9) {
+            $healthScore += 15;
+        }
 
         $healthScore = min(100, max(0, $healthScore));
 
         /* ── Insight helpers ─────────────────────────────── */
         $largestCategory = $topCategories->first();
-        $negativeWallet  = $wallets->first(fn ($w) => $w->balance < 0);
+        $negativeWallet = $wallets->first(fn ($w) => $w->balance < 0);
+
+        /* ── Onboarding progress & data-quality reminder ─────────── */
+        $hasRegularTransaction = Transaction::forUser($userId)
+            ->where('is_balance_adjustment', false)
+            ->exists();
+        $onboardingChecklist = [
+            'wallet' => $wallets->isNotEmpty(),
+            'categories' => Category::forUser($userId)->exists(),
+            'transaction' => $hasRegularTransaction,
+        ];
+        $onboardingProgress = collect($onboardingChecklist)->filter()->count();
+        $uncategorizedCount = Transaction::forUser($userId)
+            ->whereNull('category_id')
+            ->whereNull('transfer_group_id')
+            ->where('is_balance_adjustment', false)
+            ->count();
 
         return view('dashboard', compact(
             'totalBalance',
@@ -179,6 +207,9 @@ class DashboardController extends Controller
             'cashflowPositive',
             'largestCategory',
             'negativeWallet',
+            'onboardingChecklist',
+            'onboardingProgress',
+            'uncategorizedCount',
         ));
     }
 }

@@ -9,6 +9,7 @@ use App\Services\TextImportParser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class ImportTransactionController extends Controller
@@ -23,7 +24,7 @@ class ImportTransactionController extends Controller
      */
     public function show(): View
     {
-        $userId  = auth()->id();
+        $userId = auth()->id();
         $wallets = Wallet::forUser($userId)->orderBy('name')->get();
         $categories = Category::forUser($userId)->orderBy('type')->orderBy('name')->get();
 
@@ -52,24 +53,23 @@ class ImportTransactionController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        $userId = auth()->id();
+
         $request->validate([
-            'wallet_id'    => ['required', 'integer', 'exists:wallets,id'],
-            'category_id'  => ['nullable', 'integer', 'exists:categories,id'],
-            'type'         => ['required', 'in:expense,income'],
-            'items'        => ['required', 'json'],
+            'wallet_id' => ['required', 'integer', Rule::exists('wallets', 'id')->where('user_id', $userId)],
+            'category_id' => ['nullable', 'integer', Rule::exists('categories', 'id')->where('user_id', $userId)],
+            'type' => ['required', 'in:expense,income'],
+            'items' => ['required', 'json'],
         ]);
 
-        $user  = auth()->user();
+        $user = auth()->user();
         $items = json_decode($request->input('items'), true);
 
         if (empty($items) || ! is_array($items)) {
             return back()->withErrors(['items' => 'Data import kosong atau tidak valid.']);
         }
 
-        $wallet = Wallet::findOrFail($request->input('wallet_id'));
-
-        // Authorise wallet ownership
-        abort_unless($wallet->user_id === $user->id, 403);
+        $wallet = $user->wallets()->findOrFail($request->input('wallet_id'));
 
         $savedCount = 0;
 
@@ -85,11 +85,11 @@ class ImportTransactionController extends Controller
             }
 
             $this->creator->execute($user, [
-                'wallet_id'        => $wallet->id,
-                'category_id'      => $request->input('category_id') ?: null,
-                'type'             => $request->input('type'),
-                'description'      => $item['description'],
-                'amount'           => (int) $item['amount'],
+                'wallet_id' => $wallet->id,
+                'category_id' => $request->input('category_id') ?: null,
+                'type' => $request->input('type'),
+                'description' => $item['description'],
+                'amount' => (int) $item['amount'],
                 'transaction_date' => $item['date'],
             ]);
 

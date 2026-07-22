@@ -17,6 +17,37 @@
         </div>
     @endif
 
+    @if($onboardingProgress < 3)
+        <section class="onboarding-checklist-card">
+            <div class="onboarding-checklist-copy">
+                <span class="onboarding-checklist-kicker">Mulai dengan benar</span>
+                <h2>Lengkapi pengaturan awal</h2>
+                <p>{{ $onboardingProgress }} dari 3 langkah selesai. Data yang lengkap membuat laporan lebih akurat.</p>
+                <div class="onboarding-mini-progress"><span style="width: {{ ($onboardingProgress / 3) * 100 }}%"></span></div>
+            </div>
+            <div class="onboarding-checklist-items">
+                <a href="{{ route('wallet.index') }}" class="{{ $onboardingChecklist['wallet'] ? 'done' : '' }}">
+                    <i class="bi bi-{{ $onboardingChecklist['wallet'] ? 'check-circle-fill' : 'circle' }}"></i> Buat dompet
+                </a>
+                <a href="{{ route('category.index') }}" class="{{ $onboardingChecklist['categories'] ? 'done' : '' }}">
+                    <i class="bi bi-{{ $onboardingChecklist['categories'] ? 'check-circle-fill' : 'circle' }}"></i> Siapkan kategori
+                </a>
+                <a href="{{ route('transaction.index') }}" class="{{ $onboardingChecklist['transaction'] ? 'done' : '' }}">
+                    <i class="bi bi-{{ $onboardingChecklist['transaction'] ? 'check-circle-fill' : 'circle' }}"></i> Catat transaksi
+                </a>
+            </div>
+            <a href="{{ route('onboarding.show') }}" class="btn-rp btn-rp-primary">Lanjutkan setup <i class="bi bi-arrow-right"></i></a>
+        </section>
+    @endif
+
+    @if($uncategorizedCount > 0)
+        <a class="uncategorized-reminder" href="{{ route('transaction.index', ['category_id' => 'uncategorized']) }}">
+            <span class="uncategorized-reminder-icon"><i class="bi bi-tags"></i></span>
+            <span><strong>{{ $uncategorizedCount }} transaksi belum memiliki kategori</strong><small>Lengkapi kategorinya agar laporan dan insight AI lebih akurat.</small></span>
+            <i class="bi bi-arrow-right"></i>
+        </a>
+    @endif
+
     @php
         $monthName          = \Carbon\Carbon::now()->translatedFormat('F Y');
         $maxCatAmount       = $topCategories->max('total_amount') ?: 1;
@@ -521,8 +552,14 @@
             @php
                 $isTransfer = !is_null($tx->transfer_group_id);
                 $isIncome   = !$isTransfer && $tx->amount >= 0;
+                $isAdjustment = (bool) $tx->is_balance_adjustment;
 
-                if ($isTransfer) {
+                if ($isAdjustment) {
+                    $txBg        = '#f5f3ff'; $txColor = '#7c3aed';
+                    $txIcon      = 'bi-sliders';
+                    $txBadge     = ''; $txBadgeLabel = 'Koreksi Saldo';
+                    $txAmtClass  = 'transfer'; $txPrefix = $tx->amount >= 0 ? '+' : '−';
+                } elseif ($isTransfer) {
                     $txBg        = '#eff6ff'; $txColor = '#2563eb';
                     $txIcon      = 'bi-arrow-left-right';
                     $txBadge     = 'tx-badge-transfer'; $txBadgeLabel = 'Transfer';
@@ -545,12 +582,12 @@
                 </div>
                 <div class="tx-item-body">
                     <div class="tx-item-desc">
-                        {{ $tx->description ?? ($isTransfer ? 'Transfer' : ($isIncome ? 'Pemasukan' : 'Pengeluaran')) }}
+                        {{ $tx->description ?? ($isAdjustment ? 'Koreksi Saldo' : ($isTransfer ? 'Transfer' : ($isIncome ? 'Pemasukan' : 'Pengeluaran'))) }}
                     </div>
                     <div class="tx-item-meta">
                         <span class="tx-item-date">{{ $tx->transaction_date->format('d M Y') }}</span>
-                        <span class="tx-item-badge {{ $txBadge }}">{{ $txBadgeLabel }}</span>
-                        @if(!$isTransfer && $tx->category)
+                        <span class="tx-item-badge {{ $txBadge }}" @if($isAdjustment) style="background:#f5f3ff;color:#7c3aed;" @endif>{{ $txBadgeLabel }}</span>
+                        @if(!$isTransfer && !$isAdjustment && $tx->category)
                             <span class="tx-item-cat">{{ $tx->category->name }}</span>
                         @endif
                     </div>

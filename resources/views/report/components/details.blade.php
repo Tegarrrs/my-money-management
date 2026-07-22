@@ -22,6 +22,7 @@
                     <button type="button" class="btn btn-outline-success btn-filter-type" data-type="income" style="font-size: 12px; padding: 5px 12px;">Pemasukan</button>
                     <button type="button" class="btn btn-outline-danger btn-filter-type" data-type="expense" style="font-size: 12px; padding: 5px 12px;">Pengeluaran</button>
                     <button type="button" class="btn btn-outline-primary btn-filter-type" data-type="transfer" style="font-size: 12px; border-radius: 0 8px 8px 0; padding: 5px 12px;">Transfer</button>
+                    <button type="button" class="btn btn-outline-secondary btn-filter-type" data-type="adjustment" style="font-size: 12px; border-radius: 8px; padding: 5px 12px;">Koreksi</button>
                 </div>
             </div>
         @endif
@@ -46,10 +47,13 @@
                             $isTransfer = !is_null($tx->transfer_group_id);
                             $isIncome   = !$isTransfer && $tx->amount >= 0;
                             $isSplit    = !is_null($tx->split_group_id);
+                            $isAdjustment = (bool) $tx->is_balance_adjustment;
                             
                             $rowType = 'expense';
                             if ($isTransfer) {
                                 $rowType = 'transfer';
+                            } elseif ($isAdjustment) {
+                                $rowType = 'adjustment';
                             } elseif ($isIncome) {
                                 $rowType = 'income';
                             }
@@ -80,7 +84,11 @@
                             
                             {{-- Kategori --}}
                             <td class="cell-cat" style="padding: 12px 16px; vertical-align: middle;">
-                                @if($isTransfer)
+                                @if($isAdjustment)
+                                    <span class="type-badge" style="background:#f5f3ff;color:#7c3aed;">
+                                        <i class="bi bi-sliders" style="font-size:9px;"></i> Koreksi Saldo
+                                    </span>
+                                @elseif($isTransfer)
                                     <span class="type-badge badge-transfer" style="font-size: 11px; padding: 4px 8px; border-radius: 6px;">
                                         <i class="bi bi-arrow-left-right" style="font-size:9px;"></i> Transfer
                                     </span>
@@ -96,15 +104,13 @@
                             
                             {{-- Dompet --}}
                             <td class="cell-wallet" style="padding: 12px 16px; vertical-align: middle;">
-                                @if($isTransfer)
-                                    @php
-                                        $toWallet = \App\Models\Transaction::where('transfer_group_id', $tx->transfer_group_id)
-                                            ->where('amount', '>', 0)->first()?->wallet;
-                                    @endphp
+                                @if($isAdjustment)
+                                    <span class="type-badge" style="background:#f5f3ff;color:#7c3aed;">Koreksi</span>
+                                @elseif($isTransfer)
                                     <div class="wallet-chip d-inline-flex align-items-center gap-1" style="background: #f3f4f6; padding: 4px 8px; border-radius: 6px; font-size: 12px;">
                                         <span style="font-weight:600;color:#374151;">{{ $tx->wallet?->name ?? '—' }}</span>
                                         <span class="wallet-arrow text-muted mx-1" style="font-size: 10px;"><i class="bi bi-arrow-right"></i></span>
-                                        <span style="font-weight:600;color:#374151;">{{ $toWallet?->name ?? '—' }}</span>
+                                        <span style="font-weight:600;color:#374151;">{{ $tx->destination_wallet_name ?? '—' }}</span>
                                     </div>
                                 @else
                                     <div class="wallet-chip d-inline-flex align-items-center gap-1" style="background: #f3f4f6; padding: 4px 8px; border-radius: 6px; font-size: 12px;">

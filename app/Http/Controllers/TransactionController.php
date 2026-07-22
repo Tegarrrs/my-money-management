@@ -27,7 +27,7 @@ class TransactionController extends Controller
 
         $transactions = $query->paginate(15)->withQueryString();
 
-        $wallets    = Wallet::forUser($userId)->orderBy('name')->get();
+        $wallets = Wallet::forUser($userId)->orderBy('name')->get();
         $categories = Category::forUser($userId)->orderBy('type')->orderBy('name')->get();
 
         if ($request->ajax()) {
@@ -52,23 +52,28 @@ class TransactionController extends Controller
             $query->where('transaction_date', '<=', $request->date_to);
         }
         if ($request->filled('category_id')) {
-            $query->where('category_id', $request->category_id);
+            if ($request->category_id === 'uncategorized') {
+                $query->whereNull('category_id')->whereNull('transfer_group_id');
+            } else {
+                $query->where('category_id', $request->category_id);
+            }
         }
         if ($request->filled('wallet_id')) {
             $query->where('wallet_id', $request->wallet_id);
         }
         if ($request->filled('type')) {
             match ($request->type) {
-                'income'   => $query->where('amount', '>', 0)->whereNull('transfer_group_id'),
-                'expense'  => $query->where('amount', '<', 0)->whereNull('transfer_group_id'),
+                'income' => $query->where('amount', '>', 0)->whereNull('transfer_group_id')->where('is_balance_adjustment', false),
+                'expense' => $query->where('amount', '<', 0)->whereNull('transfer_group_id')->where('is_balance_adjustment', false),
                 'transfer' => $query->whereNotNull('transfer_group_id')->where('amount', '<', 0), // show only debit leg
-                default    => null,
+                'adjustment' => $query->where('is_balance_adjustment', true),
+                default => null,
             };
         } else {
             // By default exclude the "credit leg" of transfers to avoid duplicates
             $query->where(function ($q) {
                 $q->whereNull('transfer_group_id')
-                  ->orWhere('amount', '<', 0); // only show debit leg of transfers
+                    ->orWhere('amount', '<', 0); // only show debit leg of transfers
             });
         }
 
@@ -124,7 +129,7 @@ class TransactionController extends Controller
 
         // 1. Search category_suggestions
         $suggestion = CategorySuggestion::where('user_id', $userId)
-            ->where('keyword', 'like', '%' . $query . '%')
+            ->where('keyword', 'like', '%'.$query.'%')
             ->orderBy('confidence', 'desc')
             ->first();
 
@@ -134,7 +139,7 @@ class TransactionController extends Controller
 
         // 2. Search recent transactions
         $prevTx = Transaction::where('user_id', $userId)
-            ->where('description', 'like', '%' . $query . '%')
+            ->where('description', 'like', '%'.$query.'%')
             ->whereNotNull('category_id')
             ->orderByDesc('id')
             ->first();
@@ -154,10 +159,10 @@ class TransactionController extends Controller
 
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="transaksi_dompetra_' . now()->format('Ymd_His') . '.csv"',
+            'Content-Disposition' => 'attachment; filename="transaksi_dompetra_'.now()->format('Ymd_His').'.csv"',
             'Pragma' => 'no-cache',
             'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-            'Expires' => '0'
+            'Expires' => '0',
         ];
 
         $callback = function () use ($transactions) {
@@ -166,12 +171,12 @@ class TransactionController extends Controller
             fputcsv($file, ['Tanggal', 'Deskripsi', 'Detail', 'Kategori', 'Dompet', 'Jenis', 'Jumlah']);
 
             foreach ($transactions as $tx) {
-                $isTransfer = !is_null($tx->transfer_group_id);
-                $isIncome   = !$isTransfer && $tx->amount >= 0;
-                
+                $isTransfer = ! is_null($tx->transfer_group_id);
+                $isIncome = ! $isTransfer && $tx->amount >= 0;
+
                 $type = $isTransfer ? 'Transfer' : ($isIncome ? 'Pemasukan' : 'Pengeluaran');
                 $category = $isTransfer ? 'Transfer' : ($tx->category?->name ?? '—');
-                
+
                 fputcsv($file, [
                     $tx->transaction_date->format('Y-m-d'),
                     $tx->description ?? '—',
@@ -191,7 +196,7 @@ class TransactionController extends Controller
     public function bulkDestroy(Request $request, DeleteTransaction $action): RedirectResponse
     {
         $ids = $request->input('transaction_ids', []);
-        if (empty($ids) || !is_array($ids)) {
+        if (empty($ids) || ! is_array($ids)) {
             return redirect()->route('transaction.index')->with('error', 'Tidak ada transaksi yang dipilih.');
         }
 
@@ -213,15 +218,15 @@ class TransactionController extends Controller
         $ids = $request->input('transaction_ids', []);
         $categoryId = $request->input('category_id');
 
-        if (empty($ids) || !is_array($ids)) {
+        if (empty($ids) || ! is_array($ids)) {
             return redirect()->route('transaction.index')->with('error', 'Tidak ada transaksi yang dipilih.');
         }
 
         $userId = auth()->id();
-        
+
         if ($categoryId) {
             $category = Category::where('user_id', $userId)->where('id', $categoryId)->first();
-            if (!$category) {
+            if (! $category) {
                 return redirect()->route('transaction.index')->with('error', 'Kategori tidak valid.');
             }
         }
@@ -240,12 +245,15 @@ class TransactionController extends Controller
     public function splits(Transaction $transaction): JsonResponse
     {
         $this->authorizeOwner($transaction);
-        if (!$transaction->split_group_id) {
+        if (! $transaction->split_group_id) {
             return response()->json([]);
         }
         $splits = Transaction::where('split_group_id', $transaction->split_group_id)
+            ->where('user_id', auth()->id())
+            ->select(['id', 'category_id', 'amount', 'description'])
             ->orderBy('id')
             ->get();
+
         return response()->json($splits);
     }
 

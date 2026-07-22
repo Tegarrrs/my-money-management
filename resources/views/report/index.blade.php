@@ -38,7 +38,16 @@
 
     {{-- ── Summary Cards ───────────────────────────────────────────── --}}
     {{-- ── Summary Cards Component ── --}}
-    @include('report.components.summary', ['summary' => $report['summary']])
+    @include('report.components.summary', [
+        'summary' => $report['summary'],
+        'transactionCount' => count($report['transactions']),
+    ])
+
+    {{-- ── AI Summary + Largest Expenses ── --}}
+    @include('report.components.insights', [
+        'insight' => $report['ai_insight'],
+        'largestExpenses' => $report['largest_expenses'],
+    ])
 
     {{-- ── Category Chart + Table Component ── --}}
     @include('report.components.category', ['categoryBreakdown' => $report['category_breakdown']])

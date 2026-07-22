@@ -16,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'transaction_date',
     'event_id',
     'transfer_group_id',
+    'split_group_id',
+    'is_balance_adjustment',
     'draft_id',
     'receipt_id',
 ])]
@@ -26,6 +28,7 @@ class Transaction extends Model
         return [
             'amount' => 'decimal:2',
             'transaction_date' => 'date',
+            'is_balance_adjustment' => 'boolean',
         ];
     }
 
@@ -33,7 +36,7 @@ class Transaction extends Model
 
     public function getFormattedAmountAttribute(): string
     {
-        return 'Rp ' . number_format(abs($this->amount), 0, ',', '.');
+        return 'Rp '.number_format(abs($this->amount), 0, ',', '.');
     }
 
     public function getFormattedDateAttribute(): string
@@ -57,12 +60,16 @@ class Transaction extends Model
 
     public function scopeIncome($query)
     {
-        return $query->where('amount', '>', 0)->whereNull('transfer_group_id');
+        return $query->where('amount', '>', 0)
+            ->whereNull('transfer_group_id')
+            ->where('is_balance_adjustment', false);
     }
 
     public function scopeExpense($query)
     {
-        return $query->where('amount', '<', 0)->whereNull('transfer_group_id');
+        return $query->where('amount', '<', 0)
+            ->whereNull('transfer_group_id')
+            ->where('is_balance_adjustment', false);
     }
 
     public function scopeTransfer($query)

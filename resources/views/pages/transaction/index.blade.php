@@ -53,6 +53,7 @@
                 <label>Kategori</label>
                 <select name="category_id">
                     <option value="">Semua kategori</option>
+                    <option value="uncategorized" {{ request('category_id') === 'uncategorized' ? 'selected' : '' }}>Tanpa kategori</option>
                     @foreach($categories as $cat)
                         <option value="{{ $cat->id }}" {{ request('category_id') == $cat->id ? 'selected' : '' }}>{{ $cat->name }}</option>
                     @endforeach
@@ -65,6 +66,7 @@
                     <option value="income"    {{ request('type') === 'income'   ? 'selected' : '' }}>Pemasukan</option>
                     <option value="expense"   {{ request('type') === 'expense'  ? 'selected' : '' }}>Pengeluaran</option>
                     <option value="transfer"  {{ request('type') === 'transfer' ? 'selected' : '' }}>Transfer</option>
+                    <option value="adjustment" {{ request('type') === 'adjustment' ? 'selected' : '' }}>Koreksi Saldo</option>
                 </select>
             </div>
             <div class="filter-actions">

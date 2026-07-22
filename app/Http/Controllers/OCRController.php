@@ -10,6 +10,7 @@ use App\Models\Wallet;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
@@ -21,8 +22,7 @@ class OCRController extends Controller
     public function __construct(
         private readonly ImportFromImage $importFromImage,
         private readonly CreateTransaction $createTransaction,
-    ) {
-    }
+    ) {}
 
     /**
      * Show the OCR import page.
@@ -57,7 +57,7 @@ class OCRController extends Controller
         return response()->json([
             'success' => true,
             'count' => count($receipt->items),
-            'items' => array_map(fn($dto) => $dto->toArray(), $receipt->items),
+            'items' => array_map(fn ($dto) => $dto->toArray(), $receipt->items),
             'date' => $receipt->date,
             'subtotal' => $receipt->subtotal,
             'service_charge' => $receipt->serviceCharge,
@@ -73,17 +73,15 @@ class OCRController extends Controller
         $userId = auth()->id();
 
         $request->validate([
-            'wallet_id' => ['required', 'integer', 'exists:wallets,id'],
-            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'wallet_id' => ['required', 'integer', Rule::exists('wallets', 'id')->where('user_id', $userId)],
+            'category_id' => ['nullable', 'integer', Rule::exists('categories', 'id')->where('user_id', $userId)],
             'type' => ['required', 'in:income,expense'],
             'date' => ['required', 'date'],
             'items' => ['required', 'json'],
         ]);
 
-        $wallet = Wallet::findOrFail($request->input('wallet_id'));
-        abort_unless($wallet->user_id === $userId, 403);
-
         $user = auth()->user();
+        $wallet = $user->wallets()->findOrFail($request->input('wallet_id'));
         $rawItems = json_decode($request->input('items'), true);
         $savedCount = 0;
 

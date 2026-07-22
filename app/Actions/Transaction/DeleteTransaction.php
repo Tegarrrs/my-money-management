@@ -13,7 +13,9 @@ class DeleteTransaction
         DB::transaction(function () use ($transaction) {
             if ($transaction->transfer_group_id) {
                 // Find all legs of this transfer
-                $legs = Transaction::where('transfer_group_id', $transaction->transfer_group_id)->get();
+                $legs = Transaction::where('user_id', $transaction->user_id)
+                    ->where('transfer_group_id', $transaction->transfer_group_id)
+                    ->get();
                 foreach ($legs as $leg) {
                     $wallet = Wallet::find($leg->wallet_id);
                     if ($wallet) {
@@ -23,7 +25,9 @@ class DeleteTransaction
                 }
             } elseif ($transaction->split_group_id) {
                 // Find all parts of this split
-                $parts = Transaction::where('split_group_id', $transaction->split_group_id)->get();
+                $parts = Transaction::where('user_id', $transaction->user_id)
+                    ->where('split_group_id', $transaction->split_group_id)
+                    ->get();
                 foreach ($parts as $part) {
                     $wallet = Wallet::find($part->wallet_id);
                     if ($wallet) {

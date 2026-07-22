@@ -52,13 +52,13 @@
                                     <button class="btn-outline-dp py-1 px-2"
                                         style="font-size:12px;"
                                         onclick="editWallet({{ $wallet->id }}, '{{ addslashes($wallet->name) }}', '{{ $wallet->type }}', '{{ $wallet->icon }}', '{{ $wallet->color }}', {{ $wallet->allow_negative_balance ? 'true' : 'false' }}, {{ $wallet->balance }})"
-                                        title="Edit">
+                                        title="Edit" aria-label="Edit dompet {{ $wallet->name }}">
                                         <i class="bi bi-pencil"></i>
                                     </button>
                                     <form method="POST" action="{{ route('wallet.destroy', $wallet) }}"
                                           onsubmit="return confirm('Hapus dompet {{ addslashes($wallet->name) }}?')">
                                         @csrf @method('DELETE')
-                                        <button type="submit" class="btn-outline-dp py-1 px-2" style="font-size:12px;color:var(--color-expense);border-color:var(--color-expense-ring);" title="Hapus">
+                                        <button type="submit" class="btn-outline-dp py-1 px-2" style="font-size:12px;color:var(--color-expense);border-color:var(--color-expense-ring);" title="Hapus" aria-label="Hapus dompet {{ $wallet->name }}">
                                             <i class="bi bi-trash3"></i>
                                         </button>
                                     </form>
@@ -66,7 +66,7 @@
                             </div>
                             <div class="card-amount mt-2">{{ $wallet->formatted_balance }}</div>
                             <div class="card-meta">
-                                {{ $wallet->transactions()->count() }} transaksi
+                                {{ $wallet->transactions()->where('is_balance_adjustment', false)->count() }} transaksi
                                 {{ $wallet->allow_negative_balance ? ' · Saldo negatif diizinkan' : '' }}
                             </div>
                         </div>
@@ -217,5 +217,6 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('wIcon').value = this.dataset.icon;
         });
     });
+});
 </script>
 @endpush

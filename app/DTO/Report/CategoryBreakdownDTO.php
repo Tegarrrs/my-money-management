@@ -8,6 +8,8 @@ class CategoryBreakdownDTO
         public readonly string $category,
         public readonly float $total,
         public readonly float $percentage,
+        public readonly int $transactionCount = 0,
+        public readonly array $transactions = [],
     ) {}
 
     public function toArray(): array
@@ -16,6 +18,8 @@ class CategoryBreakdownDTO
             'category' => $this->category,
             'total' => $this->total,
             'percentage' => $this->percentage,
+            'transaction_count' => $this->transactionCount,
+            'transactions' => $this->transactions,
         ];
     }
 }

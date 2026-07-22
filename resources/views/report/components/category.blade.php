@@ -47,6 +47,12 @@
                                     <span class="cat-color-dot"
                                         style="background:{{ $catColors[$i % count($catColors)] }}"></span>
                                     <span class="cat-name">{{ $cat['category'] }}</span>
+                                    <button class="category-detail-toggle js-category-detail" type="button"
+                                        data-category-index="{{ $i }}" data-bs-toggle="modal"
+                                        data-bs-target="#categoryTransactionsModal">
+                                        Lihat {{ $cat['transaction_count'] }} transaksi
+                                        <i class="bi bi-box-arrow-up-right"></i>
+                                    </button>
                                 </div>
                             </td>
                             <td>
@@ -79,6 +85,28 @@
     </div>
 </div>
 
+{{-- Satu modal dipakai ulang agar rincian panjang tidak menambah tinggi halaman. --}}
+<div class="modal fade" id="categoryTransactionsModal" tabindex="-1"
+    aria-labelledby="categoryTransactionsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable category-modal-dialog">
+        <div class="modal-content category-modal-content">
+            <div class="modal-header category-modal-header">
+                <div>
+                    <div class="category-modal-eyebrow">Rincian kategori</div>
+                    <h5 class="modal-title" id="categoryTransactionsModalLabel">Kategori</h5>
+                    <div class="category-modal-summary" id="categoryModalSummary"></div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body category-modal-body" id="categoryModalTransactions"></div>
+            <div class="modal-footer category-modal-footer">
+                <span id="categoryModalFooterText"></span>
+                <button type="button" class="btn-rp btn-rp-default" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @push('js')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -87,6 +115,51 @@
 
         /* ── Donut chart ─────────────────────────────────────────── */
         const categoryData = @json($categoryBreakdown);
+
+        const moneyFormatter = new Intl.NumberFormat('id-ID', {
+            style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
+        });
+
+        document.querySelectorAll('.js-category-detail').forEach(button => {
+            button.addEventListener('click', function () {
+                const category = categoryData[Number(this.dataset.categoryIndex)];
+                if (!category) return;
+
+                document.getElementById('categoryTransactionsModalLabel').textContent = category.category;
+                document.getElementById('categoryModalSummary').textContent =
+                    `${category.transaction_count} transaksi · ${category.percentage.toLocaleString('id-ID')}% dari total pengeluaran`;
+                document.getElementById('categoryModalFooterText').textContent =
+                    `Total ${moneyFormatter.format(category.total)}`;
+
+                const list = document.getElementById('categoryModalTransactions');
+                list.replaceChildren();
+
+                category.transactions.forEach(transaction => {
+                    const item = document.createElement('div');
+                    item.className = 'category-modal-item';
+
+                    const info = document.createElement('div');
+                    info.className = 'category-modal-item-info';
+
+                    const name = document.createElement('div');
+                    name.className = 'category-modal-item-name';
+                    name.textContent = transaction.description;
+
+                    const meta = document.createElement('div');
+                    meta.className = 'category-modal-item-meta';
+                    meta.textContent = [transaction.formatted_date, transaction.wallet, transaction.detail]
+                        .filter(Boolean).join(' · ');
+
+                    const amount = document.createElement('div');
+                    amount.className = 'category-modal-item-amount';
+                    amount.textContent = moneyFormatter.format(transaction.amount);
+
+                    info.append(name, meta);
+                    item.append(info, amount);
+                    list.append(item);
+                });
+            });
+        });
 
         if (categoryData && categoryData.length > 0) {
             new ApexCharts(document.querySelector('#categoryChart'), {

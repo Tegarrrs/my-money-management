@@ -20,6 +20,7 @@
                     $isTransfer = !is_null($tx->transfer_group_id);
                     $isIncome   = !$isTransfer && $tx->amount >= 0;
                     $isSplit    = !is_null($tx->split_group_id);
+                    $isAdjustment = (bool) $tx->is_balance_adjustment;
                 @endphp
                 <tr data-id="{{ $tx->id }}">
                     {{-- Checkbox bulk action --}}
@@ -48,7 +49,11 @@
 
                     {{-- Kategori --}}
                     <td class="cell-cat">
-                        @if($isTransfer)
+                        @if($isAdjustment)
+                            <span class="type-badge" style="background:#f5f3ff;color:#7c3aed;">
+                                <i class="bi bi-sliders"></i> Koreksi Saldo
+                            </span>
+                        @elseif($isTransfer)
                             <span class="type-badge badge-transfer">
                                 <i class="bi bi-arrow-left-right" style="font-size:10px;"></i> Transfer
                             </span>
@@ -64,7 +69,9 @@
 
                     {{-- Dompet --}}
                     <td class="cell-wallet">
-                        @if($isTransfer)
+                        @if($isAdjustment)
+                            <span class="type-badge" style="background:#f5f3ff;color:#7c3aed;">Koreksi</span>
+                        @elseif($isTransfer)
                             @php
                                 $toWallet = \App\Models\Transaction::where('transfer_group_id', $tx->transfer_group_id)
                                     ->where('amount', '>', 0)->first()?->wallet;
@@ -114,7 +121,7 @@
                         
                         {{-- Lampiran Struk --}}
                         @if($tx->receipt)
-                            <button type="button" class="btn-icon me-1 text-primary" onclick="showReceiptLightbox('{{ asset($tx->receipt->image_path) }}')" title="Lihat Struk">
+                            <button type="button" class="btn-icon me-1 text-primary" onclick="showReceiptLightbox('{{ route('receipts.show', $tx->receipt) }}')" title="Lihat Struk" aria-label="Lihat struk transaksi">
                                 <i class="bi bi-receipt"></i>
                             </button>
                         @endif
@@ -133,13 +140,13 @@
                                 {{ $toWalletId ?? 'null' }},
                                 {{ $isSplit ? 'true' : 'false' }}
                             )"
-                            title="Edit">
+                            title="Edit" aria-label="Edit transaksi">
                             <i class="bi bi-pencil"></i>
                         </button>
                         <form method="POST" action="{{ route('transaction.destroy', $tx) }}" class="d-inline"
                               onsubmit="return confirm('Hapus transaksi ini? Saldo dompet akan dikembalikan.')">
                             @csrf @method('DELETE')
-                            <button type="submit" class="btn-icon btn-icon-del" title="Hapus">
+                            <button type="submit" class="btn-icon btn-icon-del" title="Hapus" aria-label="Hapus transaksi">
                                 <i class="bi bi-trash3"></i>
                             </button>
                         </form>

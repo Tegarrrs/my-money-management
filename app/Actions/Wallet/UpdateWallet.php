@@ -3,26 +3,44 @@
 namespace App\Actions\Wallet;
 
 use App\Models\Wallet;
+use Illuminate\Support\Facades\DB;
 
 class UpdateWallet
 {
     public function execute(Wallet $wallet, array $data): Wallet
     {
-        $update = [
-            'name'                   => $data['name'],
-            'type'                   => $data['type'],
-            'icon'                   => $data['icon'] ?? $wallet->icon,
-            'color'                  => $data['color'] ?? $wallet->color,
-            'allow_negative_balance' => $data['allow_negative_balance'] ?? $wallet->allow_negative_balance,
-        ];
+        return DB::transaction(function () use ($wallet, $data) {
+            $lockedWallet = Wallet::query()->lockForUpdate()->findOrFail($wallet->id);
+            $oldName = $lockedWallet->name;
 
-        // Allow direct balance correction when user explicitly provides it
-        if (isset($data['initial_balance']) && $data['initial_balance'] !== '') {
-            $update['balance'] = (float) $data['initial_balance'];
-        }
+            if (isset($data['initial_balance']) && $data['initial_balance'] !== '') {
+                $targetBalance = round((float) $data['initial_balance'], 2);
+                $currentBalance = round((float) $lockedWallet->balance, 2);
+                $difference = round($targetBalance - $currentBalance, 2);
 
-        $wallet->update($update);
+                if (abs($difference) >= 0.01) {
+                    $lockedWallet->transactions()->create([
+                        'user_id' => $lockedWallet->user_id,
+                        'amount' => $difference,
+                        'description' => "Koreksi saldo – {$oldName}",
+                        'detail' => 'Dibuat otomatis dari perubahan saldo dompet.',
+                        'transaction_date' => now()->toDateString(),
+                        'is_balance_adjustment' => true,
+                    ]);
 
-        return $wallet->fresh();
+                    $lockedWallet->increment('balance', $difference);
+                }
+            }
+
+            $lockedWallet->update([
+                'name' => $data['name'],
+                'type' => $data['type'],
+                'icon' => $data['icon'] ?? $lockedWallet->icon,
+                'color' => $data['color'] ?? $lockedWallet->color,
+                'allow_negative_balance' => $data['allow_negative_balance'] ?? false,
+            ]);
+
+            return $lockedWallet->fresh();
+        });
     }
 }

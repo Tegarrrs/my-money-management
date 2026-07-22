@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Services\Onboarding\DefaultCategoryService;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -11,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'google_id', 'avatar'])]
+#[Fillable(['name', 'email', 'password', 'google_id', 'avatar', 'onboarding_step', 'onboarding_completed_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -28,6 +29,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'onboarding_completed_at' => 'datetime',
         ];
     }
 
@@ -74,16 +76,7 @@ class User extends Authenticatable
     protected static function booted()
     {
         static::created(function (User $user) {
-            $categories = [
-                ['name' => 'Makanan & Minuman', 'type' => 'expense', 'icon' => 'bi-cup-hot', 'color' => '#f97316'],
-                ['name' => 'Transportasi', 'type' => 'expense', 'icon' => 'bi-car-front', 'color' => '#3b82f6'],
-                ['name' => 'Belanja', 'type' => 'expense', 'icon' => 'bi-bag', 'color' => '#ec4899'],
-                ['name' => 'Gaji', 'type' => 'income', 'icon' => 'bi-cash-stack', 'color' => '#22c55e'],
-                ['name' => 'Lain-lain', 'type' => 'expense', 'icon' => 'bi-three-dots', 'color' => '#6b7280'],
-            ];
-            foreach ($categories as $cat) {
-                $user->categories()->create($cat);
-            }
+            app(DefaultCategoryService::class)->ensureFor($user);
         });
     }
 }
