@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ImportTransactionController;
@@ -7,6 +8,7 @@ use App\Http\Controllers\OCRController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReceiptController;
+use App\Http\Controllers\RecurringTransactionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\WalletController;
@@ -43,6 +45,21 @@ Route::middleware('auth')->group(function () {
         Route::post('/', [CategoryController::class, 'store'])->name('store');
         Route::put('/{category}', [CategoryController::class, 'update'])->name('update');
         Route::delete('/{category}', [CategoryController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('budget')->name('budget.')->group(function () {
+        Route::get('/', [BudgetController::class, 'index'])->name('index');
+        Route::post('/sync', [BudgetController::class, 'sync'])->name('sync');
+        Route::post('/copy-previous', [BudgetController::class, 'copyPrevious'])->name('copy-previous');
+    });
+
+    Route::prefix('recurring')->name('recurring.')->group(function () {
+        Route::get('/', [RecurringTransactionController::class, 'index'])->name('index');
+        Route::post('/', [RecurringTransactionController::class, 'store'])->name('store');
+        Route::put('/{recurringTransaction}', [RecurringTransactionController::class, 'update'])->name('update');
+        Route::patch('/{recurringTransaction}/toggle', [RecurringTransactionController::class, 'toggle'])->name('toggle');
+        Route::post('/{recurringTransaction}/run', [RecurringTransactionController::class, 'runNow'])->name('run');
+        Route::delete('/{recurringTransaction}', [RecurringTransactionController::class, 'destroy'])->name('destroy');
     });
 
     // Transaction CRUD

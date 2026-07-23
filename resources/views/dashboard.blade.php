@@ -48,6 +48,33 @@
         </a>
     @endif
 
+    @if($budgetSummary['has_budgets'] && ($budgetSummary['over_budget_count'] > 0 || $budgetSummary['warning_count'] > 0))
+        <a class="dashboard-budget-alert {{ $budgetSummary['over_budget_count'] > 0 ? 'danger' : 'warning' }}"
+           href="{{ route('budget.index') }}">
+            <span class="dashboard-budget-alert-icon"><i class="bi bi-bullseye"></i></span>
+            <span>
+                <strong>
+                    @if($budgetSummary['over_budget_count'] > 0)
+                        {{ $budgetSummary['over_budget_count'] }} anggaran kategori sudah terlewati
+                    @else
+                        {{ $budgetSummary['warning_count'] }} anggaran kategori mendekati batas
+                    @endif
+                </strong>
+                <small>Periksa realisasi dan sesuaikan pengeluaran bulan ini.</small>
+            </span>
+            <i class="bi bi-arrow-right"></i>
+        </a>
+    @endif
+
+    @if($recurringDueCount > 0)
+        <a class="dashboard-recurring-alert" href="{{ route('recurring.index') }}">
+            <span><i class="bi bi-arrow-repeat"></i></span>
+            <strong>{{ $recurringDueCount }} transaksi berulang menunggu diproses</strong>
+            <small>Buka jadwal untuk memeriksa transaksi yang jatuh tempo.</small>
+            <i class="bi bi-arrow-right"></i>
+        </a>
+    @endif
+
     @php
         $monthName          = \Carbon\Carbon::now()->translatedFormat('F Y');
         $maxCatAmount       = $topCategories->max('total_amount') ?: 1;
@@ -126,7 +153,11 @@
             <div class="kpi-value">Rp {{ number_format($monthlyExpense, 0, ',', '.') }}</div>
             <div class="kpi-meta">
                 Bln lalu: Rp {{ number_format($lastMonthExpense, 0, ',', '.') }}
-                &nbsp;·&nbsp; {{ $budgetUsage }}% dari pemasukan
+                @if($budgetSummary['has_budgets'])
+                    &nbsp;·&nbsp; {{ $budgetUsage }}% dari anggaran
+                @else
+                    &nbsp;·&nbsp; <a href="{{ route('budget.index') }}">Buat anggaran</a>
+                @endif
             </div>
         </div>
 
@@ -230,10 +261,15 @@
             <div class="insight-chip-body">
                 <div class="insight-chip-label">Penggunaan Anggaran</div>
                 <div class="insight-chip-value" style="color:{{ $budColor }}">
-                    {{ $budgetUsage }}% dari pemasukan
+                    @if($budgetSummary['has_budgets'])
+                        {{ $budgetUsage }}% terpakai
+                    @else
+                        Belum diatur
+                    @endif
                 </div>
                 <div class="insight-chip-sub">
-                    @if($budCrit) Anggaran hampir habis!
+                    @if(!$budgetSummary['has_budgets']) Buat batas per kategori
+                    @elseif($budCrit) Anggaran hampir habis!
                     @elseif($budWarn) Perhatikan pengeluaranmu
                     @else Anggaran masih aman
                     @endif
@@ -341,7 +377,7 @@
                         <div class="health-metric-label">Penggunaan Anggaran</div>
                         <div class="health-metric-bar-wrap">
                             <div class="health-metric-bar"
-                                 style="width:{{ $budgetUsage }}%;
+                                 style="width:{{ min(100, $budgetUsage) }}%;
                                         background:{{ $budgetUsage >= 90 ? '#b91c1c' : ($budgetUsage >= 70 ? '#ca8a04' : '#15803d') }}">
                             </div>
                         </div>
@@ -417,6 +453,18 @@
                             <i class="bi bi-tag-fill"></i>
                         </div>
                         <span class="quick-action-label">Kategori</span>
+                    </a>
+                    <a href="{{ route('budget.index') }}" class="quick-action-btn" id="qa-budget">
+                        <div class="quick-action-icon" style="background:#ecfdf5;color:#1d6a4a;">
+                            <i class="bi bi-bullseye"></i>
+                        </div>
+                        <span class="quick-action-label">Atur Anggaran</span>
+                    </a>
+                    <a href="{{ route('recurring.index') }}" class="quick-action-btn" id="qa-recurring">
+                        <div class="quick-action-icon" style="background:#eff6ff;color:#2563eb;">
+                            <i class="bi bi-arrow-repeat"></i>
+                        </div>
+                        <span class="quick-action-label">Transaksi Berulang</span>
                     </a>
                     <a href="{{ route('transaction.index') }}" class="quick-action-btn" id="qa-history">
                         <div class="quick-action-icon" style="background:#f5f3ff;color:#7c3aed;">

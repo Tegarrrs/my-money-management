@@ -320,6 +320,38 @@
 .rp-card-body { padding: 20px; }
 .rp-card-body-flush { padding: 0; }
 
+.report-budget-card {
+    display: grid; grid-template-columns: minmax(250px, 1.1fr) minmax(220px, 1fr) auto auto;
+    align-items: center; gap: 24px; margin-bottom: 16px; padding: 15px 18px;
+    border: 1px solid #d1fae5; border-radius: 14px; background: linear-gradient(110deg, #f0fdf4, #fff);
+}
+.report-budget-main { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.report-budget-icon {
+    display: grid; flex: 0 0 38px; width: 38px; height: 38px; place-items: center;
+    border-radius: 10px; color: #1d6a4a; background: #dcfce7; font-size: 16px;
+}
+.report-budget-main > div:last-child { min-width: 0; }
+.report-budget-main span { display: block; color: #6b7280; font-size: 9px; font-weight: 700; text-transform: uppercase; }
+.report-budget-main strong { display: block; overflow: hidden; color: #111827; font-size: 15px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.report-budget-main strong small { color: #9ca3af; font-size: 9.5px; font-weight: 600; }
+.report-budget-progress-wrap > div:first-child { display: flex; justify-content: space-between; color: #6b7280; font-size: 9px; }
+.report-budget-progress-wrap b { color: #15803d; font-size: 8.5px; }
+.report-budget-progress-wrap b.warning { color: #a16207; }
+.report-budget-progress-wrap b.exceeded { color: #b91c1c; }
+.report-budget-progress { height: 6px; margin-top: 6px; overflow: hidden; border-radius: 99px; background: #e5e7eb; }
+.report-budget-progress span { display: block; height: 100%; border-radius: inherit; background: #16a34a; }
+.report-budget-progress.warning span { background: #d97706; }
+.report-budget-progress.exceeded span { background: #dc2626; }
+.report-budget-stat span { display: block; color: #9ca3af; font-size: 8.5px; text-transform: uppercase; }
+.report-budget-stat strong { color: #15803d; font-size: 12px; white-space: nowrap; }
+.report-budget-stat strong.negative { color: #b91c1c; }
+.report-budget-link { color: #9ca3af; }
+@media (max-width: 760px) {
+    .report-budget-card { grid-template-columns: 1fr auto; gap: 14px; }
+    .report-budget-progress-wrap { grid-column: 1 / -1; grid-row: 2; }
+    .report-budget-stat { grid-column: 1; }
+}
+
 /* ─── Report AI Insight & Largest Expenses ────────────────────────── */
 .report-insight-grid {
     display: grid;

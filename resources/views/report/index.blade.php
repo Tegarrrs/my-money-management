@@ -43,6 +43,10 @@
         'transactionCount' => count($report['transactions']),
     ])
 
+    @if($budgetSummary)
+        @include('report.components.budget', ['budgetSummary' => $budgetSummary])
+    @endif
+
     {{-- ── AI Summary + Largest Expenses ── --}}
     @include('report.components.insights', [
         'insight' => $report['ai_insight'],

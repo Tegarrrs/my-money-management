@@ -38,6 +38,20 @@
                 <span class="nav-label">Transaksi</span>
             </a>
         </li>
+        <li class="nav-item">
+            <a href="{{ route('budget.index') }}"
+               class="nav-link {{ request()->routeIs('budget*') ? 'active' : '' }}">
+                <i class="bi bi-bullseye"></i>
+                <span class="nav-label">Anggaran</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{{ route('recurring.index') }}"
+               class="nav-link {{ request()->routeIs('recurring*') ? 'active' : '' }}">
+                <i class="bi bi-arrow-repeat"></i>
+                <span class="nav-label">Transaksi Berulang</span>
+            </a>
+        </li>
     </ul>
 
     <span class="sidebar-section-label">Analitik</span>

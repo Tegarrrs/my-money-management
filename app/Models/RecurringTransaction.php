@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'user_id',
@@ -12,9 +13,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'category_id',
     'amount',
     'description',
+    'detail',
     'frequency',
     'next_run_at',
     'last_run_at',
+    'ends_at',
     'is_active',
 ])]
 class RecurringTransaction extends Model
@@ -30,6 +33,7 @@ class RecurringTransaction extends Model
             'amount' => 'decimal:2',
             'next_run_at' => 'datetime',
             'last_run_at' => 'datetime',
+            'ends_at' => 'date',
             'is_active' => 'boolean',
         ];
     }
@@ -56,5 +60,15 @@ class RecurringTransaction extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function runs(): HasMany
+    {
+        return $this->hasMany(RecurringTransactionRun::class);
+    }
+
+    public function scopeForUser($query, int $userId)
+    {
+        return $query->where('user_id', $userId);
     }
 }

@@ -20,6 +20,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'is_balance_adjustment',
     'draft_id',
     'receipt_id',
+    'recurring_transaction_id',
+    'recurring_run_at',
 ])]
 class Transaction extends Model
 {
@@ -29,6 +31,7 @@ class Transaction extends Model
             'amount' => 'decimal:2',
             'transaction_date' => 'date',
             'is_balance_adjustment' => 'boolean',
+            'recurring_run_at' => 'datetime',
         ];
     }
 
@@ -112,5 +115,10 @@ class Transaction extends Model
     public function receipt(): BelongsTo
     {
         return $this->belongsTo(Receipt::class);
+    }
+
+    public function recurringTransaction(): BelongsTo
+    {
+        return $this->belongsTo(RecurringTransaction::class);
     }
 }

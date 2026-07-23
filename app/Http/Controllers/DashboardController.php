@@ -3,16 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\RecurringTransaction;
 use App\Models\Transaction;
 use App\Models\Wallet;
+use App\Services\Budget\BudgetOverviewService;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(): View
+    public function index(BudgetOverviewService $budgetOverviewService): View
     {
-        $userId = auth()->id();
+        $user = auth()->user();
+        $userId = $user->id;
         $now = Carbon::now();
 
         $startOfMonth = $now->copy()->startOfMonth();
@@ -71,10 +74,11 @@ class DashboardController extends Controller
             ->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
             ->count();
 
-        /* ── Budget usage (%) ────────────────────────────── */
-        $budgetUsage = $monthlyIncome > 0
-            ? min(100, round(($monthlyExpense / $monthlyIncome) * 100))
-            : ($monthlyExpense > 0 ? 100 : 0);
+        /* ── Actual monthly budget usage ─────────────────── */
+        $budgetSummary = $budgetOverviewService->forMonth($user, $now);
+        $budgetUsage = $budgetSummary['has_budgets']
+            ? round($budgetSummary['percentage'])
+            : 0;
 
         /* ── Cashflow trend — 6 months ───────────────────── */
         $cashflowLabels = [];
@@ -181,6 +185,18 @@ class DashboardController extends Controller
             ->whereNull('transfer_group_id')
             ->where('is_balance_adjustment', false)
             ->count();
+        $recurringDueCount = RecurringTransaction::forUser($userId)
+            ->where('is_active', true)
+            ->whereNotNull('next_run_at')
+            ->where('next_run_at', '<=', now())
+            ->count();
+        $upcomingRecurring = RecurringTransaction::with(['wallet', 'category'])
+            ->forUser($userId)
+            ->where('is_active', true)
+            ->whereBetween('next_run_at', [now(), now()->addDays(7)])
+            ->orderBy('next_run_at')
+            ->limit(3)
+            ->get();
 
         return view('dashboard', compact(
             'totalBalance',
@@ -195,6 +211,7 @@ class DashboardController extends Controller
             'expenseChange',
             'monthlyTxCount',
             'budgetUsage',
+            'budgetSummary',
             'cashflowLabels',
             'cashflowIncome',
             'cashflowExpense',
@@ -210,6 +227,8 @@ class DashboardController extends Controller
             'onboardingChecklist',
             'onboardingProgress',
             'uncategorizedCount',
+            'recurringDueCount',
+            'upcomingRecurring',
         ));
     }
 }
