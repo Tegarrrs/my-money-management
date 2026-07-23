@@ -82,7 +82,9 @@
         $maxWalletBalance   = $wallets->max(fn($w) => abs((float)$w->balance)) ?: 1;
 
         // Health grade
-        $healthGrade = match(true) {
+        $healthGrade = !$financialHealth['available']
+            ? ['label' => 'Belum cukup data', 'color' => '#6b7280']
+            : match(true) {
             $healthScore >= 80 => ['label' => 'Sangat Baik',      'color' => '#15803d'],
             $healthScore >= 60 => ['label' => 'Baik',             'color' => '#ca8a04'],
             $healthScore >= 40 => ['label' => 'Cukup',            'color' => '#ea580c'],
@@ -92,8 +94,31 @@
         // SVG ring math  (r = 33, circumference ≈ 207.3)
         $ringR   = 33;
         $ringC   = 2 * M_PI * $ringR;
-        $ringDash = ($healthScore / 100) * $ringC;
+        $ringDash = (($healthScore ?? 0) / 100) * $ringC;
     @endphp
+
+    <section class="data-trust-card confidence-{{ $financialHealth['confidence'] }}">
+        <div class="data-trust-icon"><i class="bi bi-database-check"></i></div>
+        <div class="data-trust-copy">
+            <span>Kelengkapan data dashboard</span>
+            <strong>{{ $financialHealth['completeness'] }}%</strong>
+            <small>
+                {{ match($financialHealth['confidence']) {
+                    'high' => 'Insight memiliki dasar data yang kuat.',
+                    'medium' => 'Insight cukup representatif, tetapi masih dapat ditingkatkan.',
+                    default => 'Angka ringkasan belum cukup untuk menyimpulkan kondisi keuangan.',
+                } }}
+            </small>
+        </div>
+        <div class="data-trust-progress"><span style="width:{{ $financialHealth['completeness'] }}%"></span></div>
+        @if($categorizedRate !== null && $categorizedRate < 100)
+            <a href="{{ route('transaction.index', ['category_id' => 'uncategorized']) }}">
+                {{ $categorizedRate }}% pengeluaran terkategori <i class="bi bi-arrow-right"></i>
+            </a>
+        @elseif($categorizedRate !== null)
+            <span class="data-trust-ok"><i class="bi bi-check-circle-fill"></i> 100% pengeluaran terkategori</span>
+        @endif
+    </section>
 
     {{-- ═══════════════════════════════════════════════
          1. KPI CARDS
@@ -112,20 +137,23 @@
             </div>
             <div class="kpi-label">Total Saldo</div>
             <div class="kpi-value">Rp {{ number_format($totalBalance, 0, ',', '.') }}</div>
-            <div class="kpi-meta">Aset bersih dari seluruh dompet aktif</div>
+            <div class="kpi-meta">Akumulasi saldo seluruh dompet, bukan nilai kekayaan bersih</div>
         </div>
 
         {{-- Monthly Income --}}
         @php
-            $incDir = $incomeChange >= 0 ? 'up' : 'down';
-            $incAbs = abs($incomeChange);
+            $incDir = $incomeChange === null ? 'neutral' : ($incomeChange >= 0 ? 'up' : 'down');
+            $incAbs = $incomeChange === null ? null : abs($incomeChange);
         @endphp
         <div class="kpi-card kpi-income">
             <div class="kpi-header">
                 <div class="kpi-icon"><i class="bi bi-arrow-down-left-circle-fill"></i></div>
                 <span class="kpi-trend {{ $incDir }}">
-                    <i class="bi bi-arrow-{{ $incDir }}-short"></i>
-                    {{ $incAbs }}%
+                    @if($incomeChange === null)
+                        <i class="bi bi-dash"></i> Belum ada pembanding
+                    @else
+                        <i class="bi bi-arrow-{{ $incDir }}-short"></i> {{ $incAbs }}%
+                    @endif
                 </span>
             </div>
             <div class="kpi-label">Pemasukan Bulan Ini</div>
@@ -138,15 +166,18 @@
 
         {{-- Monthly Expense --}}
         @php
-            $expDir = $expenseChange > 0 ? 'down' : 'up'; // More expense = bad = red
-            $expAbs = abs($expenseChange);
+            $expDir = $expenseChange === null ? 'neutral' : ($expenseChange > 0 ? 'down' : 'up');
+            $expAbs = $expenseChange === null ? null : abs($expenseChange);
         @endphp
         <div class="kpi-card kpi-expense">
             <div class="kpi-header">
                 <div class="kpi-icon"><i class="bi bi-arrow-up-right-circle-fill"></i></div>
                 <span class="kpi-trend {{ $expDir }}">
-                    <i class="bi bi-arrow-{{ $expenseChange > 0 ? 'up' : 'down' }}-short"></i>
-                    {{ $expAbs }}%
+                    @if($expenseChange === null)
+                        <i class="bi bi-dash"></i> Belum ada pembanding
+                    @else
+                        <i class="bi bi-arrow-{{ $expenseChange > 0 ? 'up' : 'down' }}-short"></i> {{ $expAbs }}%
+                    @endif
                 </span>
             </div>
             <div class="kpi-label">Pengeluaran Bulan Ini</div>
@@ -163,22 +194,29 @@
 
         {{-- Saving Rate --}}
         @php
-            $savDir = $savingRateChange >= 0 ? 'up' : 'down';
-            $savAbs = abs($savingRateChange);
+            $savDir = $savingRateChange === null ? 'neutral' : ($savingRateChange >= 0 ? 'up' : 'down');
+            $savAbs = $savingRateChange === null ? null : abs($savingRateChange);
         @endphp
         <div class="kpi-card kpi-saving">
             <div class="kpi-header">
                 <div class="kpi-icon"><i class="bi bi-piggy-bank-fill"></i></div>
                 <span class="kpi-trend {{ $savDir }}">
-                    <i class="bi bi-arrow-{{ $savDir }}-short"></i>
-                    {{ $savAbs }}%
+                    @if($savingRateChange === null)
+                        <i class="bi bi-dash"></i> Belum ada pembanding
+                    @else
+                        <i class="bi bi-arrow-{{ $savDir }}-short"></i> {{ $savAbs }} poin
+                    @endif
                 </span>
             </div>
             <div class="kpi-label">Tingkat Tabungan</div>
-            <div class="kpi-value">{{ $savingRate }}%</div>
+            <div class="kpi-value">{{ $savingRate === null ? '—' : $savingRate.'%' }}</div>
             <div class="kpi-meta">
-                Target ideal ≥ 20%
-                &nbsp;·&nbsp; Bln lalu {{ $lastMonthSavingRate }}%
+                @if($savingRate === null)
+                    Belum dapat dihitung karena tidak ada pemasukan bulan ini
+                @else
+                    (Pemasukan − pengeluaran) ÷ pemasukan
+                    @if($lastMonthSavingRate !== null)&nbsp;·&nbsp; Bln lalu {{ $lastMonthSavingRate }}%@endif
+                @endif
             </div>
         </div>
     </div>
@@ -189,7 +227,7 @@
     <div class="insight-grid">
 
         {{-- Expense trend --}}
-        @php $expUp = $expenseChange > 0; @endphp
+        @php $expUp = $expenseChange !== null && $expenseChange > 0; @endphp
         <div class="insight-chip">
             <div class="insight-chip-icon"
                  style="background:{{ $expUp ? '#fff1f2' : '#f0fdf4' }};color:{{ $expUp ? '#b91c1c' : '#15803d' }}">
@@ -197,11 +235,15 @@
             </div>
             <div class="insight-chip-body">
                 <div class="insight-chip-label">Tren Pengeluaran</div>
-                <div class="insight-chip-value" style="color:{{ $expUp ? '#b91c1c' : '#15803d' }}">
-                    {{ $expUp ? '+' : '' }}{{ $expenseChange }}% vs bln lalu
+                <div class="insight-chip-value" style="color:{{ $expenseChange === null ? '#6b7280' : ($expUp ? '#b91c1c' : '#15803d') }}">
+                    @if($expenseChange === null) Belum ada pembanding
+                    @else {{ $expUp ? '+' : '' }}{{ $expenseChange }}% vs bln lalu
+                    @endif
                 </div>
                 <div class="insight-chip-sub">
-                    {{ $expUp ? 'Pengeluaran naik — perhatikan!' : 'Pengeluaran turun — bagus!' }}
+                    @if($expenseChange === null) Perlu data pengeluaran bulan lalu
+                    @else {{ $expUp ? 'Pengeluaran naik — perhatikan!' : 'Pengeluaran turun atau tetap' }}
+                    @endif
                 </div>
             </div>
         </div>
@@ -302,7 +344,14 @@
                 </div>
             </div>
             <div class="chart-panel-body">
-                <div id="chart-cashflow" style="height:192px;"></div>
+                @if($cashflowHasData)
+                    <div id="chart-cashflow" style="height:192px;"></div>
+                @else
+                    <div class="chart-empty" style="height:192px;">
+                        <i class="bi bi-graph-up"></i>
+                        <span>Belum ada data cashflow dalam 6 bulan terakhir</span>
+                    </div>
+                @endif
             </div>
         </div>
 
@@ -351,13 +400,21 @@
                                 stroke-dasharray="{{ round($ringDash, 2) }} {{ round($ringC, 2) }}"
                             />
                         </svg>
-                        <div class="health-score-label">{{ $healthScore }}<span>/100</span></div>
+                        <div class="health-score-label">
+                            {{ $financialHealth['available'] ? $healthScore : '—' }}
+                            <span>{{ $financialHealth['available'] ? '/100' : '' }}</span>
+                        </div>
                     </div>
                     <div>
                         <div class="health-grade" style="color:{{ $healthGrade['color'] }}">
                             {{ $healthGrade['label'] }}
                         </div>
-                        <div class="health-grade-desc">Kondisi keuangan Anda bulan ini</div>
+                        <div class="health-grade-desc">
+                            {{ $financialHealth['available'] ? 'Estimasi berdasarkan data bulan ini' : $financialHealth['reason'] }}
+                        </div>
+                        <span class="health-confidence confidence-{{ $financialHealth['confidence'] }}">
+                            Keyakinan {{ match($financialHealth['confidence']) { 'high' => 'tinggi', 'medium' => 'sedang', default => 'rendah' } }}
+                        </span>
                     </div>
                 </div>
 
@@ -366,22 +423,26 @@
                     <div class="health-metric-row">
                         <div class="health-metric-label">Tingkat Tabungan</div>
                         <div class="health-metric-bar-wrap">
-                            <div class="health-metric-bar"
-                                 style="width:{{ min(100, max(0, $savingRate)) }}%;
-                                        background:{{ $savingRate >= 20 ? '#15803d' : ($savingRate >= 10 ? '#ca8a04' : '#b91c1c') }}">
-                            </div>
+                            @if($savingRate !== null)
+                                <div class="health-metric-bar"
+                                     style="width:{{ min(100, max(0, $savingRate)) }}%;
+                                            background:{{ $savingRate >= 20 ? '#15803d' : ($savingRate >= 10 ? '#ca8a04' : '#b91c1c') }}">
+                                </div>
+                            @endif
                         </div>
-                        <div class="health-metric-val">{{ $savingRate }}%</div>
+                        <div class="health-metric-val">{{ $savingRate === null ? '—' : $savingRate.'%' }}</div>
                     </div>
                     <div class="health-metric-row">
                         <div class="health-metric-label">Penggunaan Anggaran</div>
                         <div class="health-metric-bar-wrap">
-                            <div class="health-metric-bar"
-                                 style="width:{{ min(100, $budgetUsage) }}%;
-                                        background:{{ $budgetUsage >= 90 ? '#b91c1c' : ($budgetUsage >= 70 ? '#ca8a04' : '#15803d') }}">
-                            </div>
+                            @if($budgetSummary['has_budgets'])
+                                <div class="health-metric-bar"
+                                     style="width:{{ min(100, $budgetUsage) }}%;
+                                            background:{{ $budgetUsage >= 90 ? '#b91c1c' : ($budgetUsage >= 70 ? '#ca8a04' : '#15803d') }}">
+                                </div>
+                            @endif
                         </div>
-                        <div class="health-metric-val">{{ $budgetUsage }}%</div>
+                        <div class="health-metric-val">{{ $budgetSummary['has_budgets'] ? $budgetUsage.'%' : '—' }}</div>
                     </div>
                 </div>
 
@@ -389,8 +450,13 @@
                 <div class="health-stat-grid">
                     <div class="health-stat-item">
                         <div class="health-stat-label">Cashflow</div>
-                        <div class="health-stat-value {{ $cashflowPositive ? 'positive' : 'negative' }}">
-                            {{ $cashflowPositive ? '✓ Positif' : '✗ Negatif' }}
+                        <div class="health-stat-value {{ match($cashflowState) { 'positive' => 'positive', 'negative' => 'negative', default => 'neutral' } }}">
+                            {{ match($cashflowState) {
+                                'positive' => '✓ Positif',
+                                'negative' => '✗ Negatif',
+                                'neutral' => '= Seimbang',
+                                default => '— Belum ada data',
+                            } }}
                         </div>
                     </div>
                     <div class="health-stat-item">
@@ -529,7 +595,7 @@
                                 <div class="wallet-card-balance {{ $isNeg ? 'negative' : '' }}">
                                     {{ $wallet->formatted_balance }}
                                 </div>
-                                <div class="wallet-card-pct">{{ $wPct }}% maks</div>
+                                <div class="wallet-card-pct">{{ $wPct }}% dari saldo dompet terbesar</div>
                             </div>
                             @if($isNeg)
                                 <span class="wallet-neg-badge">Minus</span>

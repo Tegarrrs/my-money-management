@@ -7,13 +7,16 @@ use App\Models\RecurringTransaction;
 use App\Models\Transaction;
 use App\Models\Wallet;
 use App\Services\Budget\BudgetOverviewService;
+use App\Services\Dashboard\FinancialHealthService;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
-    public function index(BudgetOverviewService $budgetOverviewService): View
-    {
+    public function index(
+        BudgetOverviewService $budgetOverviewService,
+        FinancialHealthService $financialHealthService,
+    ): View {
         $user = auth()->user();
         $userId = $user->id;
         $now = Carbon::now();
@@ -51,28 +54,42 @@ class DashboardController extends Controller
         /* ── Saving rate ─────────────────────────────────── */
         $savingRate = $monthlyIncome > 0
             ? round((($monthlyIncome - $monthlyExpense) / $monthlyIncome) * 100)
-            : 0;
+            : null;
 
         $lastMonthSavingRate = $lastMonthIncome > 0
             ? round((($lastMonthIncome - $lastMonthExpense) / $lastMonthIncome) * 100)
-            : 0;
+            : null;
 
-        $savingRateChange = $savingRate - $lastMonthSavingRate;
+        $savingRateChange = $savingRate !== null && $lastMonthSavingRate !== null
+            ? $savingRate - $lastMonthSavingRate
+            : null;
 
         /* ── Percent changes ─────────────────────────────── */
         $incomeChange = $lastMonthIncome > 0
             ? round((($monthlyIncome - $lastMonthIncome) / $lastMonthIncome) * 100, 1)
-            : ($monthlyIncome > 0 ? 100 : 0);
+            : null;
 
         $expenseChange = $lastMonthExpense > 0
             ? round((($monthlyExpense - $lastMonthExpense) / $lastMonthExpense) * 100, 1)
-            : ($monthlyExpense > 0 ? 100 : 0);
+            : null;
 
         /* ── Monthly transaction count ───────────────────── */
         $monthlyTxCount = Transaction::forUser($userId)
             ->where('is_balance_adjustment', false)
             ->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
             ->count();
+        $monthlyExpenseTxCount = Transaction::forUser($userId)
+            ->expense()
+            ->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
+            ->count();
+        $categorizedExpenseTxCount = Transaction::forUser($userId)
+            ->expense()
+            ->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
+            ->whereNotNull('category_id')
+            ->count();
+        $categorizedRate = $monthlyExpenseTxCount > 0
+            ? round(($categorizedExpenseTxCount / $monthlyExpenseTxCount) * 100)
+            : null;
 
         /* ── Actual monthly budget usage ─────────────────── */
         $budgetSummary = $budgetOverviewService->forMonth($user, $now);
@@ -96,6 +113,11 @@ class DashboardController extends Controller
             $cashflowExpense[] = abs((float) Transaction::forUser($userId)->expense()
                 ->whereBetween('transaction_date', [$s, $e])->sum('amount'));
         }
+        $recordedMonths = collect($cashflowIncome)
+            ->zip($cashflowExpense)
+            ->filter(fn ($values) => (float) $values[0] > 0 || (float) $values[1] > 0)
+            ->count();
+        $cashflowHasData = $recordedMonths > 0;
 
         /* ── Expense by category — donut chart ───────────── */
         $expenseCatRows = Transaction::with('category')
@@ -137,34 +159,26 @@ class DashboardController extends Controller
             ->recent(8)
             ->get();
 
-        /* ── Financial health score ───────────────────────── */
-        $cashflowPositive = $monthlyIncome >= $monthlyExpense;
-        $healthScore = 0;
-
-        // Saving rate  → 40 pts
-        if ($savingRate >= 20) {
-            $healthScore += 40;
-        } elseif ($savingRate >= 10) {
-            $healthScore += 25;
-        } elseif ($savingRate > 0) {
-            $healthScore += 10;
-        }
-
-        // Positive total balance → 30 pts
-        if ($totalBalance > 0) {
-            $healthScore += 30;
-        } elseif ($totalBalance >= 0) {
-            $healthScore += 10;
-        }
-
-        // Cashflow → 30 pts
-        if ($cashflowPositive) {
-            $healthScore += 30;
-        } elseif ($monthlyExpense > 0 && ($monthlyIncome / $monthlyExpense) >= 0.9) {
-            $healthScore += 15;
-        }
-
-        $healthScore = min(100, max(0, $healthScore));
+        /* ── Financial health with explicit data sufficiency ─────── */
+        $cashflowState = match (true) {
+            $monthlyIncome <= 0 && $monthlyExpense <= 0 => 'unavailable',
+            $monthlyIncome > $monthlyExpense => 'positive',
+            $monthlyIncome === $monthlyExpense => 'neutral',
+            default => 'negative',
+        };
+        $financialHealth = $financialHealthService->calculate([
+            'transaction_count' => $monthlyTxCount,
+            'income' => $monthlyIncome,
+            'expense' => $monthlyExpense,
+            'saving_rate' => $savingRate,
+            'categorized_rate' => $categorizedRate,
+            'recorded_months' => $recordedMonths,
+            'has_wallet' => $wallets->isNotEmpty(),
+            'has_budget' => $budgetSummary['has_budgets'],
+            'budget_usage' => $budgetUsage,
+            'balance' => $totalBalance,
+        ]);
+        $healthScore = $financialHealth['score'];
 
         /* ── Insight helpers ─────────────────────────────── */
         $largestCategory = $topCategories->first();
@@ -221,7 +235,10 @@ class DashboardController extends Controller
             'wallets',
             'recentTransactions',
             'healthScore',
-            'cashflowPositive',
+            'cashflowState',
+            'cashflowHasData',
+            'categorizedRate',
+            'financialHealth',
             'largestCategory',
             'negativeWallet',
             'onboardingChecklist',

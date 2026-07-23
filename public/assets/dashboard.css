@@ -663,6 +663,36 @@
 .dashboard-recurring-alert strong{font-size:10.5px}.dashboard-recurring-alert small{color:#3b82f6;font-size:9.5px}
 .dashboard-recurring-alert>i:last-child{margin-left:auto}
 
+.data-trust-card {
+    display:grid;grid-template-columns:auto minmax(220px,1fr) minmax(140px,.8fr) auto;
+    align-items:center;gap:13px;margin-bottom:14px;padding:12px 15px;border:1px solid #e5e7eb;
+    border-radius:13px;background:#fff;
+}
+.data-trust-icon{display:grid;width:35px;height:35px;place-items:center;border-radius:10px;color:#6b7280;background:#f3f4f6}
+.data-trust-card.confidence-high .data-trust-icon{color:#15803d;background:#f0fdf4}
+.data-trust-card.confidence-medium .data-trust-icon{color:#a16207;background:#fefce8}
+.data-trust-copy{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:7px;min-width:0}
+.data-trust-copy>span{color:#6b7280;font-size:9px;font-weight:700;text-transform:uppercase}
+.data-trust-copy>strong{font-size:13px}
+.data-trust-copy>small{overflow:hidden;color:#9ca3af;font-size:9px;text-overflow:ellipsis;white-space:nowrap}
+.data-trust-progress{height:6px;overflow:hidden;border-radius:99px;background:#f3f4f6}
+.data-trust-progress span{display:block;height:100%;border-radius:inherit;background:#6b7280}
+.confidence-high .data-trust-progress span{background:#16a34a}
+.confidence-medium .data-trust-progress span{background:#d97706}
+.data-trust-card>a{color:#1d6a4a;font-size:9px;font-weight:700;text-decoration:none;white-space:nowrap}
+.data-trust-ok{color:#15803d;font-size:9px;font-weight:700;white-space:nowrap}
+.health-confidence{display:inline-block;margin-top:6px;padding:2px 7px;border-radius:20px;color:#6b7280;background:#f3f4f6;font-size:8px;font-weight:700}
+.health-confidence.confidence-high{color:#15803d;background:#f0fdf4}
+.health-confidence.confidence-medium{color:#a16207;background:#fefce8}
+@media(max-width:800px){
+    .data-trust-card{grid-template-columns:auto 1fr}
+    .data-trust-progress{grid-column:1/-1}
+    .data-trust-card>a{grid-column:1/-1}
+    .data-trust-ok{grid-column:1/-1}
+    .data-trust-copy{grid-template-columns:auto auto}
+    .data-trust-copy>small{grid-column:1/-1}
+}
+
 /* ─── Onboarding checklist & data quality reminder ──────────────── */
 .onboarding-checklist-card {
     display: grid; grid-template-columns: minmax(240px, 1.2fr) minmax(260px, 1fr) auto;
