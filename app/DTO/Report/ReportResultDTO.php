@@ -16,6 +16,7 @@ class ReportResultDTO
         public readonly array $trend,
         public readonly Collection $transactions = new Collection,
         public readonly array $largestExpenses = [],
+        public readonly array $unusualTransactions = [],
         public readonly array $aiInsight = [],
     ) {}
 
@@ -27,6 +28,7 @@ class ReportResultDTO
             'trend' => array_map(fn ($item) => $item->toArray(), $this->trend),
             'transactions' => $this->transactions,
             'largest_expenses' => $this->largestExpenses,
+            'unusual_transactions' => $this->unusualTransactions,
             'ai_insight' => $this->aiInsight,
         ];
     }

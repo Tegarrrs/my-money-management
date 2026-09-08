@@ -22,3 +22,10 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Local troubleshooting artifacts
+migrate_error.txt
+schema.txt
+
+# Runtime-generated exports and temporary files
+/tmp

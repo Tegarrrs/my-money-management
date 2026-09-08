@@ -12,10 +12,15 @@ class ReportService
     public function __construct(
         private readonly ReportQuery $reportQuery,
         private readonly GeminiReportAnalyzer $reportAnalyzer,
+        private readonly UnusualTransactionDetector $unusualTransactionDetector,
     ) {}
 
-    public function generateReport(string $start, string $end, ?int $userId = null): ReportResultDTO
-    {
+    public function generateReport(
+        string $start,
+        string $end,
+        ?int $userId = null,
+        bool $requestAiAnalysis = false,
+    ): ReportResultDTO {
         $summaryData = $this->reportQuery->getSummary($start, $end, $userId);
 
         $summaryDTO = new SummaryDTO(
@@ -98,10 +103,18 @@ class ReportService
                 'percentage' => $category->percentage,
                 'transaction_count' => $category->transactionCount,
             ], $categoryBreakdownDTOs),
-            'largest_expenses' => array_slice($largestExpenses, 0, 3),
+            'largest_expenses' => array_map(fn ($expense) => [
+                'date' => $expense['date'],
+                'description' => $expense['description'],
+                'category' => $expense['category'],
+                'amount' => $expense['amount'],
+            ], array_slice($largestExpenses, 0, 3)),
         ];
 
-        $aiInsight = $this->reportAnalyzer->analyze($analysisData, (int) $userId);
+        $aiInsight = $requestAiAnalysis
+            ? $this->reportAnalyzer->analyze($analysisData, (int) $userId, force: true)
+            : $this->reportAnalyzer->cachedOrFallback($analysisData, (int) $userId);
+        $unusualTransactions = $this->unusualTransactionDetector->detect($detailedTransactions);
 
         return new ReportResultDTO(
             summary: $summaryDTO,
@@ -109,6 +122,7 @@ class ReportService
             trend: $trendDTOs,
             transactions: $detailedTransactions,
             largestExpenses: $largestExpenses,
+            unusualTransactions: $unusualTransactions,
             aiInsight: $aiInsight,
         );
     }

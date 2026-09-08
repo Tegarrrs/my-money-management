@@ -9,19 +9,22 @@ use Throwable;
 
 class GeminiReportAnalyzer
 {
-    public function analyze(array $data, int $userId): array
+    public function analyze(array $data, int $userId, bool $force = false): array
     {
         $fallback = $this->fallback($data);
 
-        if (($data['transaction_count'] ?? 0) === 0 || empty(config('services.gemini.api_key'))) {
-            return $fallback;
+        if (($data['transaction_count'] ?? 0) === 0) {
+            return [...$fallback, 'status' => 'no_data'];
         }
 
-        $fingerprint = hash('sha256', json_encode($data, JSON_INVALID_UTF8_SUBSTITUTE));
-        $cacheKey = "report-insight:{$userId}:{$fingerprint}";
+        if (empty(config('services.gemini.api_key'))) {
+            return [...$fallback, 'status' => 'not_configured'];
+        }
+
+        $cacheKey = $this->cacheKey($data, $userId);
         $cached = Cache::get($cacheKey);
 
-        if (is_array($cached)) {
+        if (! $force && is_array($cached)) {
             return $cached;
         }
 
@@ -35,8 +38,17 @@ class GeminiReportAnalyzer
                 'message' => $exception->getMessage(),
             ]);
 
-            return $fallback;
+            return [...$fallback, 'status' => 'request_failed'];
         }
+    }
+
+    public function cachedOrFallback(array $data, int $userId): array
+    {
+        $cached = Cache::get($this->cacheKey($data, $userId));
+
+        return is_array($cached)
+            ? $cached
+            : [...$this->fallback($data), 'status' => 'not_requested'];
     }
 
     private function requestInsight(array $data): array
@@ -86,6 +98,8 @@ PROMPT;
             'highlights' => $this->cleanList($decoded['highlights'] ?? []),
             'recommendations' => $this->cleanList($decoded['recommendations'] ?? []),
             'source' => 'gemini',
+            'status' => 'ready',
+            'analyzed_at' => now()->toIso8601String(),
         ];
     }
 
@@ -152,5 +166,12 @@ PROMPT;
     private function rupiah(float $amount): string
     {
         return 'Rp '.number_format($amount, 0, ',', '.');
+    }
+
+    private function cacheKey(array $data, int $userId): string
+    {
+        $fingerprint = hash('sha256', json_encode($data, JSON_INVALID_UTF8_SUBSTITUTE));
+
+        return "report-insight:{$userId}:{$fingerprint}";
     }
 }

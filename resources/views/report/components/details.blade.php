@@ -1,5 +1,5 @@
 <div class="rp-card mt-4">
-    <div class="rp-card-header flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+    <div class="rp-card-header report-detail-header flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
         <div>
             <div class="rp-card-title">Detail Transaksi</div>
             <div class="rp-card-sub">Menampilkan {{ count($transactions) }} transaksi dalam periode terpilih</div>
@@ -7,22 +7,22 @@
         
         {{-- Interactive Filter & Search Bar --}}
         @if(count($transactions) > 0)
-            <div class="d-flex flex-wrap gap-2 align-items-center w-100 w-md-auto">
+            <div class="report-detail-tools">
                 {{-- Search Input --}}
-                <div class="position-relative" style="min-width: 220px;">
-                    <i class="bi bi-search position-absolute text-muted" style="left: 10px; top: 50%; transform: translateY(-50%); font-size: 13px;"></i>
-                    <input type="text" id="reportSearch" class="form-control form-control-sm ps-4" 
-                           placeholder="Cari deskripsi, kategori..." 
-                           style="border-radius: 8px; font-size: 13px; border: 1px solid #e5e7eb; padding: 6px 12px 6px 30px; height: 32px; background-color: #f9fafb;">
+                <div class="report-detail-search">
+                    <i class="bi bi-search"></i>
+                    <input type="search" id="reportSearch"
+                           placeholder="Cari deskripsi, kategori..."
+                           aria-label="Cari transaksi dalam laporan">
                 </div>
                 
                 {{-- Type Filters --}}
-                <div class="btn-group btn-group-sm" role="group" aria-label="Filter Jenis">
-                    <button type="button" class="btn btn-outline-secondary active btn-filter-type" data-type="all" style="font-size: 12px; border-radius: 8px 0 0 8px; padding: 5px 12px;">Semua</button>
-                    <button type="button" class="btn btn-outline-success btn-filter-type" data-type="income" style="font-size: 12px; padding: 5px 12px;">Pemasukan</button>
-                    <button type="button" class="btn btn-outline-danger btn-filter-type" data-type="expense" style="font-size: 12px; padding: 5px 12px;">Pengeluaran</button>
-                    <button type="button" class="btn btn-outline-primary btn-filter-type" data-type="transfer" style="font-size: 12px; border-radius: 0 8px 8px 0; padding: 5px 12px;">Transfer</button>
-                    <button type="button" class="btn btn-outline-secondary btn-filter-type" data-type="adjustment" style="font-size: 12px; border-radius: 8px; padding: 5px 12px;">Koreksi</button>
+                <div class="report-type-filter" role="group" aria-label="Filter jenis transaksi">
+                    <button type="button" class="report-type-filter-button active" data-type="all">Semua</button>
+                    <button type="button" class="report-type-filter-button" data-type="income">Pemasukan</button>
+                    <button type="button" class="report-type-filter-button" data-type="expense">Pengeluaran</button>
+                    <button type="button" class="report-type-filter-button" data-type="transfer">Transfer</button>
+                    <button type="button" class="report-type-filter-button" data-type="adjustment">Koreksi saldo</button>
                 </div>
             </div>
         @endif
@@ -168,7 +168,7 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const searchInput = document.getElementById('reportSearch');
-        const filterBtns = document.querySelectorAll('.btn-filter-type');
+        const filterBtns = document.querySelectorAll('.report-type-filter-button');
         const rows = document.querySelectorAll('.report-tx-row');
         const noMatchState = document.getElementById('noMatchState');
         const table = document.getElementById('reportDetailsTable');

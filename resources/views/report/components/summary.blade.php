@@ -26,7 +26,7 @@
         <div class="s-icon"><i class="bi bi-{{ $isPositive ? 'graph-up' : 'graph-down' }}"></i></div>
         <div class="s-label">Selisih (Balance)</div>
         <div class="s-value">{{ $isPositive ? '' : '-' }}Rp {{ number_format(abs($summary['balance']), 0, ',', '.') }}</div>
-        <div class="s-sub">{{ $isPositive ? 'surplus — kondisi sehat' : 'defisit — pengeluaran melebihi pemasukan' }}
+        <div class="s-sub">{{ $isPositive ? 'surplus pada periode ini' : 'defisit pada periode ini' }}
         </div>
     </div>
     <div class="s-card expense-ratio-card">

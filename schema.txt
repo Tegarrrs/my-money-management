@@ -1,3 +1,0 @@
-
-   ERROR  Command "shell" is not defined.  
-

@@ -1,131 +1,112 @@
-# Money Management App (Dompetra)
+# Dompetra — Personal Finance Management
 
-Aplikasi sederhana untuk mencatat pemasukan dan pengeluaran, dibangun dengan pendekatan Clean Architecture di Laravel tanpa mengorbankan pragmatisme.
+Dompetra is a Laravel-based web application for tracking personal income, expenses, wallets, and budgets. It is built as a portfolio project with an emphasis on practical financial workflows, modular application code, and a clean user experience.
 
-Project ini digunakan sebagai eksplorasi bagaimana menerapkan arsitektur yang bersih, modular, dan mudah di-scale seiring bertambahnya fitur (seperti import data, parsing struk OCR, dan analytics).
+## Highlights
 
----
+- Record income, expenses, wallet transfers, and split transactions.
+- Manage wallets, categories, recurring transactions, and monthly budgets.
+- Import transactions from CSV or Excel files.
+- Scan receipt images into transaction drafts with optional Gemini-powered OCR.
+- Explore reports with cash-flow trends, category breakdowns, period comparisons, unusual-transaction detection, PDF export, and Excel export.
+- Use optional Gemini analysis only when explicitly requested from the report screen; the application keeps a local analysis fallback.
+- Register with email/password or Google OAuth when configured.
 
-## Fitur Utama
+## Tech stack
 
-- **Pencatatan Transaksi**: Mengelola pemasukan (income), pengeluaran (expense), transfer antar dompet, dan pecah transaksi (split transaction).
-- **Kategori Transaksi**: Pengelompokan pengeluaran dan pemasukan secara dinamis dengan ikon visual.
-- **Import Transaksi**: Import data transaksi dari file (CSV / Excel).
-- **OCR Scan Struk (Gemini AI)**: Unggah struk fisik Anda, dan sistem akan memindai barang belanjaan, tanggal, pajak, serta total biaya secara otomatis untuk langsung disimpan sebagai transaksi.
-- **Laporan & Analytics**: Grafik dan rincian alur kas keuangan bulanan.
+- PHP 8.3+, Laravel 13, and SQLite by default (MySQL is also supported through Laravel configuration)
+- Blade, Vite, Tailwind CSS, and Alpine.js
+- Pest for automated tests
+- PhpSpreadsheet and Dompdf for report exports
 
----
+## Run locally
 
-## Pendekatan Arsitektur
+### Requirements
 
-Struktur project memisahkan beberapa layer tanggung jawab:
-- **Http Layer**: Controller dan FormRequest (hanya menghandle request & response).
-- **Application Layer**: Use cases / Actions (misalnya `CreateTransaction`), berisi alur bisnis utama.
-- **Domain Layer**: Entity, Value Object, dan aturan bisnis inti.
-- **Infrastructure Layer**: Implementasi teknis database (Eloquent), OCR Parser (Gemini), file handling, dll.
-
----
-
-## Panduan Instalasi (Local Setup)
-
-Ikuti langkah-langkah di bawah ini untuk menjalankan project ini di komputer lokal Anda:
-
-### 1. Prasyarat (Prerequisites)
-Pastikan Anda telah menginstal:
-- PHP >= 8.2 (dengan ekstensi `GD` disarankan untuk kompresi otomatis gambar struk sebelum dikirim ke API)
+- PHP 8.3+ with SQLite support
 - Composer
-- Node.js & NPM
-- SQLite (default database aplikasi ini)
+- Node.js 22+ and npm
 
-### 2. Kloning Project
+### Installation
+
 ```bash
-git clone <repository-url>
+git clone https://github.com/Tegarrrs/my-money-management.git
 cd my-money-management
-```
-
-### 3. Instal Dependensi
-Instal package PHP (Composer) dan Javascript (NPM):
-```bash
 composer install
 npm install
-```
-
-### 4. Konfigurasi Environment File
-Salin file `.env.example` ke `.env`:
-```bash
 cp .env.example .env
-```
-
-### 5. Setup Database & Key
-Generate Application Key:
-```bash
 php artisan key:generate
 ```
 
-Secara default, aplikasi ini menggunakan SQLite. Buat file database SQLite kosong secara manual:
-- **Windows (PowerShell)**:
-  ```powershell
-  New-Item -Path database -Name database.sqlite -ItemType File
-  ```
-- **Linux / macOS / Git Bash**:
-  ```bash
-  touch database/database.sqlite
-  ```
-*(Catatan: Jika Anda langsung menjalankan perintah migrasi tanpa membuat file database tersebut, Laravel biasanya akan menawarkan untuk membuatnya secara otomatis).*
+Create the default SQLite database, run migrations and seed starter categories:
 
-Jalankan migrasi database beserta data awal (seeders):
 ```bash
+# Windows PowerShell
+New-Item -Path database -Name database.sqlite -ItemType File
+
 php artisan migrate --seed
+npm run build
+php artisan serve
 ```
-*Perintah ini akan membuat semua struktur tabel serta menambahkan akun uji coba default dan kategori transaksi utama.*
 
-### 6. Compile Frontend Assets
-Kompilasi asset Javascript & CSS menggunakan Vite:
+The app is then available at `http://127.0.0.1:8000`.
+
+> On Linux, macOS, or Git Bash, use `touch database/database.sqlite` instead.
+
+## Optional integrations
+
+All integrations are opt-in. Keep real credentials only in your local `.env` file, which is excluded from Git.
+
+### Gemini OCR and report analysis
+
+Add your Google AI Studio key to `.env`:
+
+```env
+GEMINI_API_KEY=your_key_here
+GEMINI_REPORT_MODEL=gemini-flash-latest
+```
+
+Receipt OCR sends the selected receipt image to Gemini. Report analysis sends a summary of the selected reporting period only after the user presses the analysis action.
+
+### Google OAuth
+
+Create OAuth credentials in Google Cloud Console and configure:
+
+```env
+GOOGLE_CLIENT_ID=your_client_id
+GOOGLE_CLIENT_SECRET=your_client_secret
+GOOGLE_REDIRECT_URI=http://127.0.0.1:8000/auth/google/callback
+```
+
+## Quality checks
+
 ```bash
-# Untuk development:
-npm run dev
-
-# Atau compile untuk production:
+php artisan test
 npm run build
 ```
 
-### 7. Jalankan Server
-Jalankan development server Laravel:
-```bash
-php artisan serve
-```
-Aplikasi sekarang dapat diakses melalui browser di `http://127.0.0.1:8000`.
+GitHub Actions runs these checks for pull requests and pushes to `main`.
 
----
+## Project structure
 
-## Setup Fitur OCR Gemini AI
-
-Fitur OCR Struk menggunakan Google Gemini API (`gemini-flash-latest`) untuk membaca foto struk belanja fisik Anda dan mengubahnya menjadi draf transaksi secara otomatis.
-
-### 1. Dapatkan Gemini API Key
-1. Buka [Google AI Studio](https://aistudio.google.com/).
-2. Login menggunakan akun Google Anda.
-3. Klik tombol **Get API Key** lalu klik **Create API Key**.
-4. Salin API Key yang berhasil dibuat.
-
-### 2. Konfigurasi di `.env`
-Buka file `.env` di root project Anda, lalu tambahkan API Key tersebut di baris paling bawah:
-```env
-GEMINI_API_KEY=isi_dengan_api_key_gemini_anda
+```text
+app/
+├── Actions/          Application use cases
+├── DTO/              Typed data transfer objects
+├── Http/             Controllers and request validation
+├── Infrastructure/   OCR and external-service implementations
+├── Models/           Eloquent persistence models
+└── Services/         Reporting, budgeting, dashboard, and parsing logic
 ```
 
-### 3. Cara Menggunakan
-1. Login ke aplikasi.
-2. Di halaman **Transaksi**, klik tombol **Import** lalu pilih tab/menu **Scan Struk**.
-3. Unggah foto struk belanja fisik Anda (struk belanja ritel, restoran, parkir, dll).
-4. Tunggu beberapa detik selama sistem memindai struk menggunakan Gemini AI.
-5. Rincian barang, harga, tanggal struk, serta pajak akan diekstraksi ke tabel preview.
-6. Pilih dompet dan kategori transaksi yang sesuai, lalu klik **Simpan Transaksi** untuk menyimpan seluruh data secara massal ke database.
+## Security and privacy
 
----
+Do not commit `.env` files, API keys, database dumps, uploaded receipts, or personal financial data. See [SECURITY.md](SECURITY.md) for reporting guidance.
 
-## Akun Uji Coba Default
+## Contributing
 
-Setelah Anda menjalankan seeder database (`migrate --seed`), Anda dapat langsung login menggunakan akun default berikut:
-- **Email**: `test@example.com`
-- **Password**: `password`
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+
+## License
+
+This project is released under the [MIT License](LICENSE).

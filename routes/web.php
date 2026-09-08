@@ -86,6 +86,9 @@ Route::middleware('auth')->group(function () {
 
     // Report
     Route::get('/report', [ReportController::class, 'index'])->name('report.index');
+    Route::post('/report/analyze', [ReportController::class, 'analyze'])->middleware('throttle:3,1')->name('report.analyze');
+    Route::get('/report/download/pdf', [ReportController::class, 'downloadPdf'])->name('report.download.pdf');
+    Route::get('/report/download/excel', [ReportController::class, 'downloadExcel'])->name('report.download.excel');
 
     // OCR Import
     Route::prefix('ocr')->name('ocr.')->group(function () {
